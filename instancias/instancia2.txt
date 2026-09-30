@@ -1,0 +1,19 @@
+# Instância 2: Grafo Desconexo (pelo menos duas componentes conexas)
+# Características: Pelo menos 2 componentes, permitindo testar BFS em grafo desconexo,
+# componentes conexas, ciclos e articulações.
+# Formato:
+# 1ª linha: quantidade de vértices
+# Linhas seguintes: v1 v2 peso
+12
+1 2 1.5
+1 3 2.0
+2 3 3.5
+2 4 4.0
+4 5 1.0
+6 7 2.2
+7 8 1.8
+8 9 3.0
+6 9 4.1
+10 11 2.5
+11 12 1.7
+10 12 3.3
