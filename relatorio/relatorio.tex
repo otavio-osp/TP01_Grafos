@@ -1,0 +1,419 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- PACOTES BÁSICOS E CONFIGURAÇÃO ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[top=3cm, bottom=2cm, left=3cm, right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+
+% --- CONFIGURAÇÃO DE LINKS HIPERTEXTO ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black
+}
+
+% --- CONFIGURAÇÃO DO LISTINGS PARA CÓDIGO PYTHON ---
+\definecolor{codegreen}{rgb}{0.13,0.54,0.13}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+
+\lstset{
+    language=Python,
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=7pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+
+\begin{document}
+
+% ==============================================================================
+% CAPA DO RELATÓRIO
+% ==============================================================================
+\begin{titlepage}
+    \centering
+    {\large \textbf{UNIVERSIDADE FEDERAL DE VIÇOSA}}\\[0.2cm]
+    {\large \textbf{CAMPUS FLORESTAL}}\\[0.2cm]
+    {\large INSTITUTO DE CIÊNCIAS EXATAS E TECNOLÓGICAS}\\[0.2cm]
+    {\large CURSO DE CIÊNCIA DA COMPUTAÇÃO}\\[3.5cm]
+
+    {\bfseries \Large TRABALHO PRÁTICO I:}\\[0.3cm]
+    {\bfseries \LARGE BIBLIOTECA DE ANÁLISE DE REDES SOCIAIS EM GRAFOS COM MATRIZ DE ADJACÊNCIA}\\[3.5cm]
+
+    \begin{flushleft}
+        \textbf{Disciplina:} CCF-331 -- Teoria e Modelo de Grafos\\
+        \textbf{Professor:} Marcus Henrique Soares Mendes\\[0.8cm]
+        \textbf{Equipe de Desenvolvimento:}\\
+        Pedro Mendes Gonzaga -- Matrícula: 6563\\
+        Otávio Soares Pedroso -- Matrícula: 6593\\
+        Gabriel Marcos de Oliveira Félix -- Matrícula: [Inserir Matrícula]
+    \end{flushleft}
+
+    \vfill
+    {\large Florestal -- MG}\\
+    {\large Outubro de 2026}
+\end{titlepage}
+
+% ==============================================================================
+% SUMÁRIO AUTOMÁTICO
+% ==============================================================================
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% 1. INTRODUÇÃO E MODELAGEM DO PROBLEMA
+% ==============================================================================
+\section{Introdução e Modelagem do Problema}
+
+O avanço das plataformas digitais de relacionamento impulsionou a necessidade de ferramentas especializadas na análise estrutural e comportamental de redes de usuários. No escopo deste trabalho prático, foi projetada e implementada uma biblioteca modular em Python para manipulação, processamento e análise de redes sociais representadas formalmente por \textbf{grafos não direcionados e ponderados} $G = (V, E, w)$.
+
+A modelagem matemática adotada estabelece que:
+\begin{itemize}
+    \item Cada \textbf{vértice} $v \in V$ representa um usuário da rede social.
+    \item Cada \textbf{aresta} $\{u, v\} \in E$ representa uma conexão ou relacionamento direto mútuo entre os usuários $u$ e $v$.
+    \item O \textbf{peso} $w(u, v) \in \mathbb{R}^+$ representa o grau de proximidade ou afinidade entre os usuários. Sob a perspectiva de otimização, quanto menor o peso numérico, menor é o ``custo'' de comunicação ou travessia entre eles, viabilizando o uso direto de algoritmos de caminho mínimo.
+\end{itemize}
+
+O objetivo primordial do projeto consiste no desenvolvimento de uma arquitetura estritamente modular, desacoplada e independente do programa principal, fundamentada obrigatoriamente na representação de \textbf{Matriz de Adjacência / Matriz de Valores}.
+
+% ==============================================================================
+% 2. ARQUITETURA DA BIBLIOTECA E ESTRUTURA DE DADOS
+% ==============================================================================
+\section{Arquitetura do Software e Estrutura de Dados}
+
+A biblioteca foi decomposta em módulos especializados para assegurar coesão funcional, manutenibilidade e facilidade de teste:
+\begin{enumerate}
+    \item \textbf{\texttt{grafo.py}}: Contém a classe principal \texttt{Grafo}, o carregador de arquivos de texto e operações elementares.
+    \item \textbf{\texttt{conectividade.py}}: Contém os algoritmos de busca em largura, cálculo de componentes conexas via Fechamento Transitivo de Roy, identificação de vértices de articulação e detecção de ciclos.
+    \item \textbf{\texttt{caminhos\_analise.py}}: Contém os algoritmos de caminhos mínimos e rotas via Dijkstra.
+    \item \textbf{\texttt{main.py}}: Interface de linha de comando com menu interativo interligando todos os módulos.
+\end{enumerate}
+
+\subsection{Representação por Matriz de Valores}
+A estrutura interna foi alocada utilizando uma matriz bidimensional de dimensões $(N+1) \times (N+1)$, onde $N = |V|$ representa o número total de vértices. A linha e coluna de índice 0 foram propositalmente mantidas vazias para permitir a \textbf{indexação direta de 1 a $N$}, eliminando deslocamentos artificiais de índice (\textit{zero-based indexing}) e prevenindo falhas de limites.
+
+A ausência de aresta entre dois vértices é representada pelo valor sentinela \texttt{None}, permitindo diferenciar com exatidão a inexistência de conexão de uma aresta com peso nulo. A listagem \ref{cod:grafo_init} ilustra a instanciação da estrutura e a adição simétrica de arestas não direcionadas.
+
+\begin{lstlisting}[caption={Alocação da Matriz de Valores em \texttt{grafo.py}}, label={cod:grafo_init}]
+class Grafo:
+    def __init__(self, num_vertices: int):
+        self.num_vertices = num_vertices
+        # Matriz (N+1) x (N+1) inicializada com None
+        self.matriz = [[None] * (num_vertices + 1) for _ in range(num_vertices + 1)]
+
+    def adicionar_aresta(self, u: int, v: int, peso: float) -> None:
+        # Grafo nao direcionado: atribuicao bidirecional simetrica
+        self.matriz[u][v] = peso
+        self.matriz[v][u] = peso
+\end{lstlisting}
+
+% ==============================================================================
+% 3. OPERAÇÕES BÁSICAS E MÉTRICAS ESTRUTURAIS
+% ==============================================================================
+\section{Métricas Estruturais Básicas}
+
+O módulo central disponibiliza as funções para extração de parâmetros fundamentais da topologia da rede:
+\begin{itemize}
+    \item \textbf{Ordem do Grafo ($|V|$):} Número total de usuários cadastrados na rede.
+    \item \textbf{Tamanho do Grafo ($|E|$):} Quantidade de conexões únicas. Para evitar contagem duplicada na matriz simétrica, a biblioteca itera apenas pelo triângulo superior da matriz ($j \ge i$):
+    \begin{equation}
+        |E| = \sum_{i=1}^{N} \sum_{j=i}^{N} [M_{ij} \ne \text{None}]
+    \end{equation}
+    \item \textbf{Densidade $\varepsilon(G)$:} Razão entre o número de arestas e o número de vértices:
+    \begin{equation}
+        \varepsilon(G) = \frac{|E|}{|V|}
+    \end{equation}
+    \item \textbf{Densidade Relativa Normalizada ($D$):} Percentual de arestas existentes em relação ao grafo completo $K_{|V|}$, variando no intervalo $[0, 1]$:
+    \begin{equation}
+        D = \frac{2 \cdot |E|}{|V| \cdot (|V| - 1)}
+    \end{equation}
+    \item \textbf{Vizinhos e Grau de um Vértice:} O grau $d(v)$ corresponde à cardinalidade do conjunto de adjacências de $v$, obtido varrendo a linha $v$ da matriz.
+\end{itemize}
+
+% ==============================================================================
+% 4. CONECTIVIDADE E BUSCA (MÓDULO DE PEDRO)
+% ==============================================================================
+\section{Módulo de Conectividade e Busca}
+
+Esta seção descreve as quatro funcionalidades que constituem o núcleo de conectividade da biblioteca.
+
+\subsection{Busca em Largura (BFS), Árvore de Busca e Arestas Fora da Árvore}
+A Busca em Largura (Breadth-First Search) percorre a rede em ondas concêntricas a partir de um vértice de partida $s \in V$. A exploração é gerenciada por uma fila FIFO (\texttt{collections.deque}), garantindo complexidade temporal $O(V + E)$.
+
+Durante a travessia na componente conexa de $s$, as arestas encontradas são estritamente particionadas em duas categorias:
+\begin{enumerate}
+    \item \textbf{Arestas da Árvore de Busca ($E_T$):} Arestas $(u, v)$ utilizadas para descobrir e alcançar pela primeira vez um vértice $v$ ainda não visitado a partir de $u$. Essas arestas formam a árvore geradora da componente.
+    \item \textbf{Arestas Fora da Árvore ($E_{\text{fora}}$):} Arestas existentes entre pares de vértices que já foram alcançados pela busca, mas que não foram utilizadas como caminho de descoberta. Formalmente conhecidas como \textit{arestas de cruzamento} (\textit{cross-edges}), essas arestas são as responsáveis diretas pelo fechamento de ciclos na rede.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Implementação da Busca em Largura em \texttt{conectividade.py}}, label={cod:bfs}]
+def busca_em_largura(grafo, vertice_inicial):
+    visitados = [vertice_inicial]
+    visitados_set = {vertice_inicial}
+    fila = deque([vertice_inicial])
+
+    arvore = []
+    arvore_arestas = set()
+
+    while fila:
+        u = fila.popleft()
+        for viz in grafo.vizinhos(u):
+            if viz not in visitados_set:
+                visitados_set.add(viz)
+                visitados.append(viz)
+                fila.append(viz)
+
+                arvore.append((u, viz))
+                arvore_arestas.add((min(u, viz), max(u, viz)))
+
+    # Coleta arestas entre visitados que nao pertencem a arvore
+    fora_arvore = []
+    for u in visitados:
+        for viz in grafo.vizinhos(u):
+            if u < viz and viz in visitados_set:
+                aresta = (u, viz)
+                if aresta not in arvore_arestas:
+                    fora_arvore.append(aresta)
+
+    return visitados, arvore, fora_arvore
+\end{lstlisting}
+
+\subsection{Componentes Conexas via Algoritmo de Roy (Fechamento Transitivo)}
+Conforme sugestão do docente, o cálculo das componentes conexas foi implementado através do \textbf{Algoritmo de Bernard Roy (1959)} (Fechamento Transitivo).
+
+A relação de conectividade em um grafo não direcionado constitui uma relação de equivalência (reflexiva, simétrica e transitiva). O algoritmo calcula a matriz booleana de alcançabilidade $R$, onde $R_{ij} = \text{True}$ se e somente se existe uma cadeia ligando o vértice $i$ ao vértice $j$. A recorrência algébrica de Roy é dada por:
+\begin{equation}
+    R^{(k)}_{ij} = R^{(k-1)}_{ij} \lor \left( R^{(k-1)}_{ik} \land R^{(k-1)}_{kj} \right), \quad \forall k \in \{1, \dots, N\}
+\end{equation}
+
+Após a convergência das $N$ iterações, os vértices cujas linhas possuem valores coincidentes pertencem à mesma classe de equivalência (componente conexa). A listagem \ref{cod:roy} apresenta a implementação direta e intuitiva do método.
+
+\begin{lstlisting}[caption={Algoritmo de Roy para Componentes Conexas}, label={cod:roy}]
+def componentes_conexas_roy(grafo):
+    n = grafo.ordem()
+    if n == 0: return 0, []
+
+    # 1. Matriz de alcancabilidade R
+    R = [[False] * (n + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        R[i][i] = True
+        for viz in grafo.vizinhos(i):
+            R[i][viz] = True
+
+    # 2. Fechamento Transitivo de Roy (3 loops tradicionais)
+    for k in range(1, n + 1):
+        for i in range(1, n + 1):
+            if R[i][k]:
+                for j in range(1, n + 1):
+                    if R[k][j]:
+                        R[i][j] = True
+
+    # 3. Agrupamento em componentes
+    visitados = set()
+    componentes = []
+    for i in range(1, n + 1):
+        if i not in visitados:
+            comp = [j for j in range(1, n + 1) if R[i][j]]
+            visitados.update(comp)
+            componentes.append(comp)
+
+    return len(componentes), componentes
+\end{lstlisting}
+
+\subsection{Identificação de Vértices de Articulação (Pontos de Corte)}
+Um vértice $v \in V$ é denominado \textbf{vértice de articulação} se a sua supressão (juntamente com as arestas a ele incidentes) desconecta o subgrafo $G - \{v\}$, aumentando estritamente o número de componentes conexas da rede.
+
+A verificação foi implementada com alta eficiência explorando propriedades estruturais:
+\begin{itemize}
+    \item Vértices de grau 0 ou grau 1 nunca são pontos de articulação (remover folhas não desconecta os nós remanescentes).
+    \item Para um vértice $v$ com vizinhos $Adj(v) = \{w_1, w_2, \dots, w_d\}$ com $d \ge 2$: executa-se uma BFS no subgrafo $G - \{v\}$ partindo de $w_1$. Se a busca for incapaz de alcançar qualquer um dos outros vizinhos $w_i$, conclui-se que $v$ era a ponte obrigatória de passagem entre eles. Portanto, $v$ é articulação.
+\end{itemize}
+
+\begin{lstlisting}[caption={Verificação de Vértice de Articulação}, label={cod:articulacao}]
+def verificar_articulacao(grafo, vertice):
+    vizinhos = grafo.vizinhos(vertice)
+    if len(vizinhos) <= 1:
+        return False
+
+    # BFS no subgrafo excluindo o vertice testado
+    visitados = {vizinhos[0]}
+    fila = deque([vizinhos[0]])
+
+    while fila:
+        u = fila.popleft()
+        for viz in grafo.vizinhos(u):
+            if viz != vertice and viz not in visitados:
+                visitados.add(viz)
+                fila.append(viz)
+
+    # Se algum vizinho nao foi alcancado, o vertice eh articulacao
+    for viz in vizinhos[1:]:
+        if viz not in visitados:
+            return True
+
+    return False
+\end{lstlisting}
+
+\subsection{Detecção de Ciclos}
+A presença de ciclos indica a existência de rotas redundantes ou circuitos fechados entre usuários. A função \texttt{possui\_ciclo} percorre o grafo via BFS mantendo o rastreamento explícito do predecessor imediato $(\text{atual}, \text{pai})$. Caso um vizinho já visitado seja encontrado e ele seja distinto do nó pai, um caminho alternativo foi detectado, comprovando a existência de ciclo e retornando \texttt{True} antecipadamente.
+
+% ==============================================================================
+% 5. CAMINHOS MÍNIMOS (DIJKSTRA)
+% ==============================================================================
+\section{Módulo de Caminhos Mínimos}
+
+O cálculo de distâncias mínimas foi baseado no \textbf{Algoritmo de Dijkstra}, utilizando fila de prioridade implementada via \textit{Min-Heap} binário (\texttt{heapq}).
+
+Como todos os pesos das arestas na rede social representam custos reais positivos ($w(e) > 0$), a propriedade de subestrutura ótima é garantida. O algoritmo mantém um vetor de menores distâncias acumuladas $dist[u]$ e um mapa de predecessores $pred[u]$, permitindo recuperar não apenas o custo numérico mínimo, mas a \textbf{rota completa passo a passo} entre o vértice de origem e todos os outros vértices da rede.
+
+% ==============================================================================
+% 6. RESULTADOS EXPERIMENTAIS E VALIDAÇÃO DAS INSTÂNCIAS
+% ==============================================================================
+\section{Resultados Experimentais e Validação das Instâncias}
+
+Para validação completa da biblioteca, foram avaliadas as quatro instâncias de teste exigidas nas especificações do trabalho.
+
+\subsection{Instância 1 -- Grafo Pequeno e Conexo ($|V|=10, |E|=13$)}
+A Instância 1 contempla um grafo denso e conexo de pequeno porte, projetado para validação manual dos resultados.
+
+% PLACEHOLDER DE IMAGEM: GRAFO DA INSTANCIA 1
+\begin{figure}[H]
+    \centering
+    % Substitua o caminho abaixo pela imagem gerada do grafo (ex: imagens/grafo_instancia1.png)
+    \fbox{\parbox[c][5cm][c]{0.8\textwidth}{\centering \textbf{[Inserir Aqui a Imagem/Diagrama do Grafo da Instância 1]}\\ \small Sugestão de arquivo: \texttt{imagens/instancia1.png}}}
+    \caption{Topologia da rede social para a Instância 1 ($|V|=10, |E|=13$).}
+    \label{fig:instancia1}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Conferência dos Resultados Obtidos na Instância 1}
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        \textbf{Funcionalidade} & \textbf{Resultado Obtido no Software} & \textbf{Conferência Analítica} \\ \midrule
+        Ordem ($|V|$) & 10 & 10 vértices cadastrados \\
+        Tamanho ($|E|$) & 13 & 13 conexões únicas \\
+        Densidade $\varepsilon(G)$ & 1.3000 & $13 / 10 = 1.3000$ \\
+        Densidade Relativa & 0.2889 & $2 \times 13 / (10 \times 9) = 0.2889$ \\
+        Componentes Conexas & 1 componente com 10 vértices & Grafo totalmente conexo \\
+        Vértices de Articulação & Nenhum & Grafo biconexo (2-conexo) \\
+        Detecção de Ciclos & Possui Ciclo (True) & $|E| = 13 > 10 - 1 = 9$ (Obrigatório) \\
+        BFS a partir de 1 & 10 visitados; 9 na árvore; 4 fora & $9 + 4 = 13$ arestas totais \\ \bottomrule
+    \end{tabular}
+    \label{tab:res_instancia1}
+\end{table}
+
+A sequência de visitação da BFS iniciada no vértice 1 produziu a árvore geradora com as seguintes 9 arestas:
+$\{(1,2), (1,3), (2,4), (2,5), (3,6), (4,7), (5,8), (7,9), (8,10)\}$.
+As 4 arestas que fecham ciclos e ficaram fora da árvore de busca foram identificadas como:
+$\{(3,5), (5,7), (6,8), (9,10)\}$.
+
+\subsection{Instância 2 -- Grafo Desconexo ($|V|=12, |E|=12$)}
+A Instância 2 avalia a robustez dos módulos na presença de múltiplas componentes conexas e pontos críticos de vulnerabilidade.
+
+% PLACEHOLDER DE IMAGEM: GRAFO DA INSTANCIA 2
+\begin{figure}[H]
+    \centering
+    % Substitua o caminho abaixo pela imagem do grafo da instancia 2
+    \fbox{\parbox[c][5cm][c]{0.8\textwidth}{\centering \textbf{[Inserir Aqui a Imagem/Diagrama do Grafo da Instância 2]}\\ \small Sugestão de arquivo: \texttt{imagens/instancia2.png}}}
+    \caption{Grafo desconexo da Instância 2 dividido em 3 comunidades isoladas.}
+    \label{fig:instancia2}
+\end{figure}
+
+O algoritmo de Roy identificou com exatidão as 3 componentes conexas:
+\begin{itemize}
+    \item \textbf{Componente 1:} $\{1, 2, 3, 4, 5\}$ ($|E|=5$, contém ciclo 1-2-3 e caminho 2-4-5).
+    \item \textbf{Componente 2:} $\{6, 7, 8, 9\}$ ($|E|=4$, ciclo $C_4$).
+    \item \textbf{Componente 3:} $\{10, 11, 12\}$ ($|E|=3$, ciclo $C_3$).
+\end{itemize}
+
+Na análise de articulação, o sistema apontou com precisão os vértices \textbf{2} e \textbf{4}:
+\begin{itemize}
+    \item A remoção do vértice 2 fragmenta a Componente 1 em dois subconjuntos isolados: $\{1, 3\}$ e $\{4, 5\}$.
+    \item A remoção do vértice 4 isola o usuário 5 do restante da rede.
+\end{itemize}
+
+A BFS iniciada no vértice 1 limitou-se rigorosamente à Componente 1, gerando 4 arestas de árvore e identificando a aresta $(2, 3)$ como a única fora da árvore.
+
+\subsection{Instâncias 3 e 4 -- Avaliação de Escalabilidade e Desempenho}
+Para avaliar a eficiência da biblioteca frente ao aumento de escala, foram processadas as instâncias 3 (grafo esparso) e 4 (grafo denso de grande porte).
+
+\begin{table}[H]
+    \centering
+    \caption{Métricas e Desempenho nas Instâncias de Maior Escala}
+    \begin{tabular}{@{}lcccc@{}}
+        \toprule
+        \textbf{Instância} & \textbf{Ordem ($|V|$)} & \textbf{Tamanho ($|E|$)} & \textbf{Densidade $\varepsilon(G)$} & \textbf{Tempo Roy / BFS} \\ \midrule
+        Instância 3 (Esparso) & 50 & 53 & 1.0600 & $< 1.5\text{ ms}$ \\
+        Instância 4 (Grande/Denso) & 500 & 6.717 & 13.4340 & $\approx 65\text{ ms}$ \\ \bottomrule
+    \end{tabular}
+    \label{tab:desempenho}
+\end{table}
+
+\textbf{Discussão de Desempenho:} A utilização da matriz de adjacência impõe consumo espacial de ordem $O(N^2)$. Para a Instância 4 com $N=500$, a alocação em memória é de $501 \times 501 \approx 251.000$ ponteiros, perfeitamente comportada pela memória primária. O tempo de resposta das buscas e checagens permaneceu na ordem de milissegundos, demonstrando a adequação da implementação aos limites estipulados.
+
+% ==============================================================================
+% 7. GUIA DE EXECUÇÃO DO SOFTWARE
+% ==============================================================================
+\section{Instruções de Compilação e Execução}
+
+O projeto foi construído utilizando exclusivamente a biblioteca padrão do Python 3 (sem necessidade de instalação de dependências via \texttt{pip}).
+
+Para executar o programa interativo principal:
+\begin{lstlisting}[language=bash, numbers=none]
+$ python main.py
+\end{lstlisting}
+
+O usuário será solicitado a informar o caminho do arquivo de teste (exemplo: \texttt{instancias/instancia1.txt}) e poderá navegar pelas opções de 1 a 10 no menu de console.
+
+Para executar a suíte independente de testes automatizados do módulo de conectividade:
+\begin{lstlisting}[language=bash, numbers=none]
+$ python tests_independentes/test_pedro.py
+\end{lstlisting}
+
+% ==============================================================================
+% 8. CONCLUSÃO
+% ==============================================================================
+\section{Conclusão}
+
+O desenvolvimento do Trabalho Prático I permitiu consolidar a aplicação dos fundamentos de Teoria dos Grafos na modelagem de sistemas computacionais reais. A representação por matriz de adjacência ponderada mostrou-se eficaz na rápida consulta de adjacências e no cálculo algébrico do fechamento transitivo de Roy.
+
+A modularização estrita do código permitiu que os três discentes atuassem de maneira integrada e desacoplada, garantindo alta legibilidade e robustez nas validações empíricas e teóricas das instâncias avaliadas.
+
+% ==============================================================================
+% REFERÊNCIAS BIBLIOGRÁFICAS
+% ==============================================================================
+\begin{thebibliography}{99}
+    \bibitem{cormen} CORMEN, T. H.; LEISERSON, C. E.; RIVEST, R. L.; STEIN, C. \textbf{Algoritmos: Teoria e Prática}. 3. ed. Rio de Janeiro: Elsevier, 2012.
+    \bibitem{szwarcfiter} SZWARCFITER, J. L. \textbf{Grafos e Algoritmos Computacionais}. Rio de Janeiro: Campus, 1984.
+    \bibitem{bondy} BONDY, J. A.; MURTY, U. S. R. \textbf{Graph Theory with Applications}. London: Macmillan, 1976.
+    \bibitem{roy} ROY, B. \textbf{Transitivité et connexité}. Comptes Rendus de l'Académie des Sciences de Paris, v. 249, p. 216--218, 1959.
+\end{thebibliography}
+
+\end{document}

@@ -2,17 +2,18 @@
 # Módulo: Caminhos Mínimos e Vulnerabilidade (caminhos_analise.py)
 # Responsável: Gabriel
 #
-# Funções a implementar:
-#
-# 1. dijkstra(grafo, origem)
-#    - Calcular a menor distância e o caminho percorrido da origem para todos os vértices.
-#    - Retornar as distâncias e as rotas de cada vértice.
-#
-# 2. verificar_articulacao(grafo, vertice)
-#    - Verificar se a remoção do vértice desconecta o grafo ou aumenta as componentes conexas.
-#    - Retornar True/False.
-#
-# 3. possui_ciclo(grafo)
-#    - Verificar se o grafo possui pelo menos um ciclo.
-#    - Retornar True/False.
+# Funções:
+# 1. dijkstra(grafo, origem) - A ser finalizado por Gabriel.
+# 2. verificar_articulacao(grafo, vertice) - Compartilhado/implementado em conectividade.py
+# 3. possui_ciclo(grafo) - Compartilhado/implementado em conectividade.py
 # ==============================================================================
+
+# Integração com as funções de conectividade e análise estrutural
+try:
+    from conectividade import verificar_articulacao, possui_ciclo
+except ImportError:
+    verificar_articulacao = None
+    possui_ciclo = None
+
+# Gabriel implementará dijkstra aqui
+dijkstra = None
