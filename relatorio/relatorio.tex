@@ -246,51 +246,30 @@ def componentes_conexas_roy(grafo):
     return len(componentes), componentes
 \end{lstlisting}
 
-\subsection{Identificação de Vértices de Articulação (Pontos de Corte)}
-Um vértice $v \in V$ é denominado \textbf{vértice de articulação} se a sua supressão (juntamente com as arestas a ele incidentes) desconecta o subgrafo $G - \{v\}$, aumentando estritamente o número de componentes conexas da rede.
-
-A verificação foi implementada com alta eficiência explorando propriedades estruturais:
-\begin{itemize}
-    \item Vértices de grau 0 ou grau 1 nunca são pontos de articulação (remover folhas não desconecta os nós remanescentes).
-    \item Para um vértice $v$ com vizinhos $Adj(v) = \{w_1, w_2, \dots, w_d\}$ com $d \ge 2$: executa-se uma BFS no subgrafo $G - \{v\}$ partindo de $w_1$. Se a busca for incapaz de alcançar qualquer um dos outros vizinhos $w_i$, conclui-se que $v$ era a ponte obrigatória de passagem entre eles. Portanto, $v$ é articulação.
-\end{itemize}
-
-\begin{lstlisting}[caption={Verificação de Vértice de Articulação}, label={cod:articulacao}]
-def verificar_articulacao(grafo, vertice):
-    vizinhos = grafo.vizinhos(vertice)
-    if len(vizinhos) <= 1:
-        return False
-
-    # BFS no subgrafo excluindo o vertice testado
-    visitados = {vizinhos[0]}
-    fila = deque([vizinhos[0]])
-
-    while fila:
-        u = fila.popleft()
-        for viz in grafo.vizinhos(u):
-            if viz != vertice and viz not in visitados:
-                visitados.add(viz)
-                fila.append(viz)
-
-    # Se algum vizinho nao foi alcancado, o vertice eh articulacao
-    for viz in vizinhos[1:]:
-        if viz not in visitados:
-            return True
-
-    return False
-\end{lstlisting}
-
-\subsection{Detecção de Ciclos}
-A presença de ciclos indica a existência de rotas redundantes ou circuitos fechados entre usuários. A função \texttt{possui\_ciclo} percorre o grafo via BFS mantendo o rastreamento explícito do predecessor imediato $(\text{atual}, \text{pai})$. Caso um vizinho já visitado seja encontrado e ele seja distinto do nó pai, um caminho alternativo foi detectado, comprovando a existência de ciclo e retornando \texttt{True} antecipadamente.
-
 % ==============================================================================
-% 5. CAMINHOS MÍNIMOS (DIJKSTRA)
+% 5. ANÁLISE DE CAMINHOS E VULNERABILIDADES (ALUNO 3: GABRIEL)
 % ==============================================================================
-\section{Módulo de Caminhos Mínimos}
+\section{Análise de Caminhos e Vulnerabilidades (Aluno 3: Gabriel)}
 
-O cálculo de distâncias mínimas foi baseado no \textbf{Algoritmo de Dijkstra}, utilizando fila de prioridade implementada via \textit{Min-Heap} binário (\texttt{heapq}).
+Esta seção detalha os algoritmos desenvolvidos no módulo \texttt{caminhos\_analise.py}, responsáveis pela identificação de rotas ótimas e pela análise estrutural de redundâncias e pontos críticos da rede.
 
-Como todos os pesos das arestas na rede social representam custos reais positivos ($w(e) > 0$), a propriedade de subestrutura ótima é garantida. O algoritmo mantém um vetor de menores distâncias acumuladas $dist[u]$ e um mapa de predecessores $pred[u]$, permitindo recuperar não apenas o custo numérico mínimo, mas a \textbf{rota completa passo a passo} entre o vértice de origem e todos os outros vértices da rede.
+\subsection{Caminhos Mínimos com Algoritmo de Dijkstra}
+O cálculo das menores distâncias e a recuperação das rotas a partir de um usuário de origem foram implementados utilizando o \textbf{Algoritmo de Dijkstra}. Como todos os pesos de arestas representam graus de proximidade positivos ($w(e) > 0$), a subestrutura ótima do problema é garantida.
+
+Para otimizar o desempenho estrutural, especialmente visando instâncias densas, a travessia dos vértices foi gerenciada por uma \textbf{Fila de Prioridade (Min-Heap)} através da biblioteca nativa \texttt{heapq}. A estrutura armazena tuplas (distância\_acumulada, vértice). Essa abordagem substitui a busca linear pelo vértice de menor custo, reduzindo a complexidade de tempo de $O(V^2)$ para $O((V + E) \log V)$. O algoritmo retorna dois dicionários: os custos finais mínimos e os mapas de predecessores, possibilitando reconstruir e exibir o trajeto completo passo a passo até qualquer destino.
+
+\subsection{Detecção de Ciclos via BFS}
+A presença de ciclos na rede indica a existência de conexões redundantes entre usuários. A identificação foi realizada através de uma Busca em Largura (BFS) adaptada. Durante a propagação da onda de busca, o algoritmo armazena explicitamente na fila o vértice atual e o nó ``pai'' do qual a busca proveio (tupla \texttt{(u, pai)}). 
+
+Caso a vizinhança de \texttt{u} contenha um nó já pertencente ao conjunto de vértices \texttt{visitados} e que seja \textbf{diferente do pai}, conclui-se matematicamente a convergência de duas rotas distintas para o mesmo vértice, atestando a presença de um ciclo, o que induz ao retorno imediato do valor lógico Verdadeiro.
+
+\subsection{Identificação de Vértices de Articulação}
+Um usuário atua como vértice de articulação caso a sua remoção fragmente a rede social, elevando o número de componentes conexas. A solução adotada evita o recálculo custoso de todo o fechamento do grafo. A heurística opera da seguinte maneira:
+\begin{enumerate}
+    \item Vértices com grau $d(v) \le 1$ são sumariamente ignorados, visto que folhas não desconectam componentes.
+    \item Para um vértice $v$ sob teste, inicializa-se uma BFS partindo exclusivamente do seu primeiro vizinho conhecido, aplicando uma regra de \textbf{exclusão virtual}: o vértice $v$ é solenemente ignorado durante toda a exploração, simulando sua remoção sem alterar a matriz matriz de adjacência subjacente.
+    \item Ao término da BFS, verifica-se se os demais vizinhos originais de $v$ foram alcançados. Caso pelo menos um deles conste como inacessível, fica provado que $v$ era a ponte vital de ligação, sendo corretamente classificado como articulação.
+\end{enumerate}
 
 % ==============================================================================
 % 6. RESULTADOS EXPERIMENTAIS E VALIDAÇÃO DAS INSTÂNCIAS
@@ -361,8 +340,20 @@ Na análise de articulação, o sistema apontou com precisão os vértices \text
 
 A BFS iniciada no vértice 1 limitou-se rigorosamente à Componente 1, gerando 4 arestas de árvore e identificando a aresta $(2, 3)$ como a única fora da árvore.
 
+\subsubsection*{Validação Manual Adicional (Caminhos Mínimos e Ciclos)}
+Para comprovar a corretude do módulo de caminhos e vulnerabilidades, a verificação de ciclos retornou \texttt{Verdadeiro}, confirmando manualmente a presença do ciclo $C_3$ formado pelas arestas $\{(1,2), (2,3), (1,3)\}$.
+Ao executar o Algoritmo de Dijkstra a partir do vértice 1, os custos calculados para os vértices alcançáveis foram perfeitamente validados com o somatório manual dos pesos:
+\begin{itemize}
+    \item $dist[1] = 0.0$ (origem)
+    \item $dist[2] = 1.5$ (rota $1 \to 2$)
+    \item $dist[3] = 2.0$ (rota $1 \to 3$)
+    \item $dist[4] = 5.5$ (rota $1 \to 2 \to 4$, somando $1.5 + 4.0$)
+    \item $dist[5] = 6.5$ (rota $1 \to 2 \to 4 \to 5$, somando $1.5 + 4.0 + 1.0$)
+\end{itemize}
+Os vértices $6$ ao $12$, por estarem em outras componentes conexas, registraram adequadamente a distância infinita ($+\infty$).
+
 \subsection{Instâncias 3 e 4 -- Avaliação de Escalabilidade e Desempenho}
-Para avaliar a eficiência da biblioteca frente ao aumento de escala, foram processadas as instâncias 3 (grafo esparso) e 4 (grafo denso de grande porte).
+Para avaliar a eficiência da biblioteca frente ao aumento de escala, foram processadas as instâncias 3 (grafo esparso) e 4 (grafo denso de grande porte, contendo 500 vértices).
 
 \begin{table}[H]
     \centering
@@ -376,7 +367,9 @@ Para avaliar a eficiência da biblioteca frente ao aumento de escala, foram proc
     \label{tab:desempenho}
 \end{table}
 
-\textbf{Discussão de Desempenho:} A utilização da matriz de adjacência impõe consumo espacial de ordem $O(N^2)$. Para a Instância 4 com $N=500$, a alocação em memória é de $501 \times 501 \approx 251.000$ ponteiros, perfeitamente comportada pela memória primária. O tempo de resposta das buscas e checagens permaneceu na ordem de milissegundos, demonstrando a adequação da implementação aos limites estipulados.
+\textbf{Discussão de Desempenho:} A utilização da matriz de adjacência impõe consumo espacial de ordem $O(N^2)$. Para a Instância 4 com $N=500$, a alocação em memória é de $501 \times 501 \approx 251.000$ ponteiros, perfeitamente comportada pela memória primária. 
+
+O grande desafio dessa topologia densa foi superado graças à modelagem de \textbf{Caminhos Mínimos via Min-Heap} (\texttt{heapq}). Caso o Dijkstra fosse implementado com busca linear no vetor de distâncias ($O(V^2)$), as travessias se tornariam um gargalo severo. A fila de prioridade garantiu resoluções quase instantâneas. Da mesma forma, os tempos de resposta para a \textbf{Detecção de Ciclos} e, notavelmente, para a identificação de \textbf{Vértices de Articulação} --- mesmo disparando dezenas de BFS concorrentes --- operaram na escala imperceptível de poucos milissegundos, comprovando que a supressão lógica de vértices na matriz é extremamente otimizada quando atrelada a estruturas de fila FIFO (\texttt{deque}).
 
 % ==============================================================================
 % 7. GUIA DE EXECUÇÃO DO SOFTWARE

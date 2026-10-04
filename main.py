@@ -5,17 +5,17 @@ from grafo import Grafo
 # Importa as funções dos módulos dos colegas com fallback para None,
 # permitindo testar o menu mesmo antes de eles finalizarem suas partes.
 try:
-    from conectividade import busca_em_largura, componentes_conexas_roy, verificar_articulacao
+    from conectividade import busca_em_largura, componentes_conexas_roy
 except (ImportError, ModuleNotFoundError):
     busca_em_largura = None
     componentes_conexas_roy = None
-    verificar_articulacao = None
 
 try:
-    from caminhos_analise import dijkstra, possui_ciclo
+    from caminhos_analise import dijkstra, possui_ciclo, verificar_articulacao
 except (ImportError, ModuleNotFoundError):
     dijkstra = None
     possui_ciclo = None
+    verificar_articulacao = None
 
 
 def exibir_menu() -> None:
@@ -96,8 +96,11 @@ def main():
                 v = ler_vertice(grafo, "Vértice para consultar grau: ")
                 print(f"\n-> Grau do vértice {v}: {grafo.grau(v)}")
 
-            # 6. Vértice de articulação (Módulo Pedro)
+            # 6. Vértice de articulação (Módulo Gabriel / Aluno 3)
             case "6":
+                if verificar_articulacao is None:
+                    print("\n[PENDENTE] Função ainda não implementada em caminhos_analise.py (Gabriel).")
+                    continue
                 v = ler_vertice(grafo, "Vértice para verificar articulação: ")
                 try:
                     eh_art = verificar_articulacao(grafo, v)
