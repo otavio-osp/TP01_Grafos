@@ -1,12 +1,12 @@
-"""
-Módulo: Caminhos Mínimos e Vulnerabilidade (caminhos_analise.py)
-Responsável: Aluno 3
-
-Funções:
-1. dijkstra(grafo, origem) - Algoritmo de caminhos mínimos de origem única.
-2. verificar_articulacao(grafo, vertice) - Verifica se um vértice é ponto de articulação.
-3. possui_ciclo(grafo) - Verifica a existência de ciclos no grafo.
-"""
+# ==============================================================================
+# Módulo: Caminhos Mínimos e Vulnerabilidade (caminhos_analise.py)
+# Responsável: Gabriel
+#
+# Funções:
+# 1. dijkstra(grafo, origem) - Algoritmo de caminhos mínimos de origem única.
+# 2. verificar_articulacao(grafo, vertice) - Verifica se um vértice é ponto de articulação.
+# 3. possui_ciclo(grafo) - Verifica a existência de ciclos no grafo.
+# ==============================================================================
 
 import heapq
 from collections import deque
@@ -14,20 +14,10 @@ from grafo import Grafo
 
 
 def dijkstra(grafo: Grafo, origem: int) -> tuple[dict[int, float], dict[int, list[int]]]:
-    """
-    Calcula os caminhos mínimos a partir de um vértice de origem para todos os outros
-    vértices do grafo utilizando o algoritmo de Dijkstra.
-
-    Args:
-        grafo (Grafo): Instância do grafo.
-        origem (int): Vértice de origem.
-
-    Returns:
-        tuple: (distancias, caminhos)
-            - distancias: dict mapeando vértice -> menor distância a partir da origem.
-            - caminhos: dict mapeando vértice -> lista de vértices representando a rota mínima.
-    """
+    # Calcula os caminhos mínimos a partir de um vértice de origem para todos os outros
+    # vértices do grafo utilizando o algoritmo de Dijkstra.
     n = grafo.ordem()
+    
     # Inicializa todas as distâncias com infinito
     distancias = {v: float('inf') for v in range(1, n + 1)}
     distancias[origem] = 0.0
@@ -82,20 +72,10 @@ def dijkstra(grafo: Grafo, origem: int) -> tuple[dict[int, float], dict[int, lis
 
 
 def verificar_articulacao(grafo: Grafo, vertice: int) -> bool:
-    """
-    Verifica se um dado vértice é um ponto de articulação. Um ponto de articulação é
-    aquele cuja remoção aumenta o número de componentes conexas do grafo.
-
-    A lógica verifica se os vizinhos do vértice em teste continuam conectados entre si
-    após a exclusão virtual (ignorar na travessia) do próprio vértice.
-
-    Args:
-        grafo (Grafo): Instância do grafo.
-        vertice (int): Vértice a ser testado.
-
-    Returns:
-        bool: True se for articulação, False caso contrário.
-    """
+    # Verifica se um dado vértice é um ponto de articulação. Um ponto de articulação é
+    # aquele cuja remoção aumenta o número de componentes conexas do grafo.
+    # A lógica verifica se os vizinhos do vértice em teste continuam conectados entre si
+    # após a exclusão virtual (ignorar na travessia) do próprio vértice.
     vizinhos = grafo.vizinhos(vertice)
     
     # Se o vértice tem 0 ou 1 vizinho, removê-lo nunca desconectará o grafo.
@@ -125,15 +105,7 @@ def verificar_articulacao(grafo: Grafo, vertice: int) -> bool:
 
 
 def possui_ciclo(grafo: Grafo) -> bool:
-    """
-    Verifica a existência de pelo menos um ciclo no grafo utilizando Busca em Largura (BFS).
-
-    Args:
-        grafo (Grafo): Instância do grafo.
-
-    Returns:
-        bool: True se o grafo possuir ciclo(s), False se for acíclico (uma floresta).
-    """
+    # Verifica a existência de pelo menos um ciclo no grafo utilizando Busca em Largura (BFS).
     n = grafo.ordem()
     visitados = set()
 
