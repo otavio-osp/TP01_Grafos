@@ -1,0 +1,480 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- PACOTES BÁSICOS E CONFIGURAÇÃO ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[top=3cm, bottom=2cm, left=3cm, right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+
+% --- CONFIGURAÇÃO DE LINKS HIPERTEXTO ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black
+}
+
+% --- CONFIGURAÇÃO DO LISTINGS PARA CÓDIGO PYTHON ---
+\definecolor{codegreen}{rgb}{0.13,0.54,0.13}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+
+\lstset{
+    language=Python,
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=7pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+
+\begin{document}
+
+% ==============================================================================
+% CAPA DO RELATÓRIO
+% ==============================================================================
+\begin{titlepage}
+    \centering
+    {\large \textbf{UNIVERSIDADE FEDERAL DE VIÇOSA}}\\[0.2cm]
+    {\large \textbf{CAMPUS FLORESTAL}}\\[0.2cm]
+    {\large INSTITUTO DE CIÊNCIAS EXATAS E TECNOLÓGICAS}\\[0.2cm]
+    {\large CURSO DE CIÊNCIA DA COMPUTAÇÃO}\\[2.5cm]
+
+    {\Large \textbf{TRABALHO PRÁTICO II}}\\[0.6cm]
+    {\LARGE \textbf{Extensão da Biblioteca de Análise de Grafos:}\par}
+    \vspace{0.3cm}
+    {\Large \textbf{Circuitos Eulerianos, Árvore Geradora Mínima,}\par}
+    \vspace{0.2cm}
+    {\Large \textbf{Métricas de Distância e Cobertura de Vértices}\par}
+    \vspace{2.5cm}
+
+    \begin{flushleft}
+        \textbf{Disciplina:} CCF-331 -- Teoria e Modelo de Grafos\\
+        \textbf{Professor:} Marcus Henrique Soares Mendes\\[0.8cm]
+        \textbf{Equipe de Desenvolvimento:}\\
+        Pedro Mendes Gonzaga -- Matrícula: 6563\\
+        Otávio Soares Pedroso -- Matrícula: 6593\\
+        Gabriel Marcos de Oliveira Félix -- Matrícula: 5792
+    \end{flushleft}
+
+    \vfill
+    {\large Florestal -- MG}\\
+    {\large Novembro de 2026}
+\end{titlepage}
+
+% ==============================================================================
+% SUMÁRIO AUTOMÁTICO
+% ==============================================================================
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% 1. INTRODUÇÃO E ESCOPO DA EXTENSÃO
+% ==============================================================================
+\section{Introdução e Escopo da Extensão}
+
+No Trabalho Prático I, foi estabelecida a infraestrutura básica para modelagem e análise de redes sociais ponderadas e não direcionadas representadas por matrizes de adjacência, incluindo operações elementares, busca em largura, cálculo de componentes conexas via Fechamento Transitivo de Roy, caminhos mínimos com Dijkstra e identificação de pontos de vulnerabilidade (ciclos e vértices de articulação).
+
+O presente Trabalho Prático II tem como objetivo estender as capacidades computacionais dessa biblioteca com a incorporação de quatro novos domínios algorítmicos essenciais da Teoria dos Grafos:
+\begin{enumerate}
+    \item \textbf{Circuito Euleriano:} Verificação estrutural de existência e extração do circuito completo através do Algoritmo de Hierholzer, permitindo validar percursos ótimos de inspeção de relacionamentos sem redundância de arestas.
+    \item \textbf{Árvore Geradora Mínima (AGM):} Identificação de subgrafos acíclicos conexos de custo total mínimo mediante o algoritmo guloso de Kruskal (com suporte à estrutura de dados \textit{Union-Find} com união por rank e compressão de caminhos) e de Prim.
+    \item \textbf{Métricas de Distância e Centralidade:} Determinação de excentricidades, diâmetro e raio/centro da rede, caracterizando quantitativamente a dispersão de informações e a hierarquia de influência dos usuários.
+    \item \textbf{Cobertura Mínima de Vértices:} Resolução de um problema clássico de otimização combinatória NP-difícil por meio da comparação sistemática entre uma abordagem gulosa (critério de maior grau residual) e uma abordagem heurística alternativa, contrastando cardinalidade e tempo de execução.
+\end{enumerate}
+
+Para validar a implementação, foram geradas quatro instâncias estruturalmente distintas, variando desde grafos de pequeno porte para conferência manual até redes densas de 500 vértices para análise de escalabilidade.
+
+% ==============================================================================
+% 2. ARQUITETURA MODULAR ESTENDIDA
+% ==============================================================================
+\section{Arquitetura do Software e Organização Modular}
+
+A arquitetura manteve a filosofia de baixo acoplamento adotada no módulo inicial, preservando intacta a classe base \texttt{Grafo} em \texttt{grafo.py} e distribuindo as novas responsabilidades em módulos especializados:
+
+\begin{itemize}
+    \item \textbf{\texttt{euler.py}:} Responsável pelo teste de eulerianidade (conexão e paridade de graus) e reconstrução da sequência ordenada de vértices do circuito euleriano.
+    \item \textbf{\texttt{agm.py}:} Implementa os algoritmos de Kruskal e Prim, acompanhados da estrutura de partição disjunta \texttt{UnionFind}.
+    \item \textbf{\texttt{metricas.py}:} Reutiliza o motor de caminhos mínimos do módulo \texttt{caminhos\_analise.py} para computar as distâncias todos-para-todos, calculando excentricidades, diâmetro e raio.
+    \item \textbf{\texttt{cobertura.py}:} Encapsula os procedimentos de aproximação para Cobertura de Vértices, oferecendo as rotas gulosa e heurística com instrumentação de tempo.
+    \item \textbf{\texttt{main.py}:} Ponto de entrada consolidado em linha de comando, atualizado com as opções 11 a 14.
+\end{itemize}
+
+% ==============================================================================
+% 3. CIRCUITO EULERIANO
+% ==============================================================================
+\section{Circuito Euleriano}
+
+\subsection{Fundamentação Teórica}
+Um circuito em um grafo conexo $G = (V, E)$ é classificado como \textbf{Euleriano} se e somente se é um circuito fechado simples que contém todas as arestas de $G$ exatamente uma vez. 
+
+De acordo com o célebre Teorema de Euler (1736):
+\begin{quote}
+    \textit{Um grafo não direcionado conexo admite um circuito Euleriano se e somente se todos os seus vértices possuem grau par.}
+\end{quote}
+
+Portanto, a verificação prévia consiste em:
+\begin{enumerate}
+    \item Verificar se o grafo é conexo (desconsiderando vértices isolados, se houver).
+    \item Verificar se para todo $v \in V$, $d(v) \equiv 0 \pmod 2$.
+\end{enumerate}
+
+\subsection{Algoritmo de Hierholzer}
+Caso as condições de existência sejam satisfeitas, a extração efetiva do circuito é realizada pelo \textbf{Algoritmo de Hierholzer (1873)}. O procedimento opera mantendo uma pilha de vértices em exploração e construindo o circuito por meio da junção de subciclos:
+
+\begin{enumerate}
+    \item Inicia-se em um vértice arbitrário $u$ de grau não nulo.
+    \item Realiza-se um passeio em profundidade, removendo as arestas visitadas até que não haja vizinhos disponíveis (retornando ao ponto de partida devido à paridade par dos graus).
+    \item Enquanto a pilha não estiver vazia: se o vértice no topo ainda possui arestas incidentes não percorridas, inicia-se um novo subciclo a partir dele; caso contrário, desempilha-se o vértice e insere-se na sequência final do circuito.
+\end{enumerate}
+
+Como cada aresta é percorrida e removida uma única vez, a complexidade de tempo do método é linear: $O(|V| + |E|)$.
+
+\begin{lstlisting}[caption={Estrutura de Hierholzer em \texttt{euler.py}}, label={cod:euler}]
+def circuito_euleriano(grafo):
+    if not tem_circuito_euleriano(grafo):
+        return None
+
+    # Copia a lista de adjacencias para permitir remocao de arestas
+    adj = {u: list(grafo.vizinhos(u)) for u in range(1, grafo.ordem() + 1)}
+    
+    pilha = [1]
+    circuito = []
+
+    while pilha:
+        atual = pilha[-1]
+        if adj[atual]:
+            viz = adj[atual].pop()
+            adj[viz].remove(atual)
+            pilha.append(viz)
+        else:
+            circuito.append(pilha.pop())
+
+    return circuito[::-1]
+\end{lstlisting}
+
+% ==============================================================================
+% 4. ÁRVORE GERADORA MÍNIMA (AGM)
+% ==============================================================================
+\section{Árvore Geradora Mínima (AGM)}
+
+\subsection{Fundamentação e Algoritmo de Kruskal}
+Dada uma rede conexa e ponderada $G = (V, E, w)$, a Árvore Geradora Mínima é um subgrafo $T = (V, E_T)$ tal que $T$ é uma árvore (conexo e acíclico, contendo $|V|-1$ arestas) e a soma dos pesos de suas arestas $\sum_{e \in E_T} w(e)$ é mínima.
+
+O \textbf{Algoritmo de Kruskal} é uma estratégia gulosa fundamentada na ordenação global de todas as arestas por peso não decrescente. As arestas são iteradas sequencialmente e adicionadas à solução se e somente se seus extremos pertencem a componentes conexas distintas, evitando a formação de ciclos.
+
+Para atingir eficiência operacional, foi implementada a estrutura de dados \textbf{Union-Find} (conjuntos disjuntos) com duas otimizações teóricas essenciais:
+\begin{itemize}
+    \item \textbf{Path Compression (Compressão de Caminho):} Durante a operação \texttt{encontrar(x)}, os ponteiros de todos os nós visitados são redirecionados diretamente para o representante da raiz, achatando a árvore.
+    \item \textbf{Union by Rank (União por Rank):} A árvore com menor rank é pendurada sob a raiz de maior rank, garantindo profundidade logarítmica.
+\end{itemize}
+
+Com essas técnicas, a complexidade de amortização por operação é $O(\alpha(V))$, onde $\alpha$ é o inverso da função de Ackermann. O gargalo computacional do algoritmo reside na ordenação das arestas, resultando em complexidade total $O(|E| \log |E|)$.
+
+\begin{lstlisting}[caption={Algoritmo de Kruskal em \texttt{agm.py}}, label={cod:kruskal}]
+def kruskal(grafo: Grafo) -> tuple[list[tuple[int, int, float]], float]:
+    n = grafo.ordem()
+    arestas = []
+    for u in range(1, n + 1):
+        for v in range(u + 1, n + 1):
+            peso = grafo.obter_peso(u, v)
+            if peso is not None:
+                arestas.append((peso, u, v))
+
+    arestas.sort()
+    uf = UnionFind(n)
+    agm = []
+    custo_total = 0.0
+
+    for peso, u, v in arestas:
+        if uf.unir(u, v):
+            agm.append((u, v, peso))
+            custo_total += peso
+            if len(agm) == n - 1:
+                break
+
+    return agm, custo_total
+\end{lstlisting}
+
+\subsection{Algoritmo de Prim}
+Como alternativa e mecanismo de verificação cruzada de corretude, implementou-se também o \textbf{Algoritmo de Prim}. Partindo de um vértice arbitrário $r$, a árvore é expandida iterativamente selecionando a aresta de corte de menor peso que conecta um vértice já pertencente à árvore a um vértice externo, gerenciada por uma fila de prioridade binária (\texttt{heapq}).
+
+% ==============================================================================
+% 5. MÉTRICAS DE DISTÂNCIA E CENTRALIDADE
+% ==============================================================================
+\section{Métricas de Distância e Centralidade}
+
+A análise da importância de vértices em redes de comunicação baseia-se na caracterização geométrica das distâncias mínimas geodésicas $d(u, v)$. No módulo \texttt{metricas.py}, foram formalizadas três medidas fundamentais:
+
+\subsection{Excentricidade}
+A \textbf{excentricidade} $\epsilon(v)$ de um nó $v$ representa a maior distância mais curta entre $v$ e qualquer outro nó da rede:
+\begin{equation}
+    \epsilon(v) = \max_{u \in V} d(v, u)
+\end{equation}
+Vértices com baixa excentricidade situam-se próximos a toda a rede, apresentando alta velocidade de disseminação de informações. Caso algum nó seja inalcançável (grafo desconexo), adota-se $\epsilon(v) = +\infty$.
+
+\subsection{Diâmetro e Raio}
+O \textbf{diâmetro} $\text{diam}(G)$ reflete a máxima separação observada entre dois nós quaisquer do grafo, correspondendo à máxima excentricidade:
+\begin{equation}
+    \text{diam}(G) = \max_{v \in V} \epsilon(v)
+\end{equation}
+
+O \textbf{raio} $\text{rad}(G)$ é o valor mínimo de excentricidade presente na rede:
+\begin{equation}
+    \text{rad}(G) = \min_{v \in V} \epsilon(v)
+\end{equation}
+
+Os vértices cuja excentricidade coincide com o raio formam o \textbf{Centro do Grafo}:
+\begin{equation}
+    C(G) = \{v \in V \mid \epsilon(v) = \text{rad}(G)\}
+\end{equation}
+Em redes sociais, o centro identifica os usuários mais estrategicamente posicionados, candidatos naturais a articuladores de fluxos.
+
+\begin{lstlisting}[caption={Cálculo de Diâmetro e Raio em \texttt{metricas.py}}, label={cod:metricas}]
+def diametro(grafo: Grafo) -> tuple[float, list[int]]:
+    excentricidades = calcular_todas_excentricidades(grafo)
+    maior_valor = max(excentricidades.values())
+    vertices = [v for v, exc in excentricidades.items() if exc == maior_valor]
+    return maior_valor, vertices
+
+def raio(grafo: Grafo) -> tuple[float, list[int]]:
+    excentricidades = calcular_todas_excentricidades(grafo)
+    menor_valor = min(excentricidades.values())
+    centro = [v for v, exc in excentricidades.items() if exc == menor_valor]
+    return menor_valor, centro
+\end{lstlisting}
+
+% ==============================================================================
+% 6. COBERTURA MÍNIMA DE VÉRTICES
+% ==============================================================================
+\section{Cobertura Mínima de Vértices}
+
+\subsection{Formulação Matemática}
+Um subconjunto de vértices $S \subseteq V$ é denominado uma \textbf{cobertura de vértices} de $G = (V, E)$ se toda aresta $\{u, v\} \in E$ possui ao menos uma de suas extremidades em $S$, isto é, $\{u, v\} \cap S \ne \emptyset$. 
+
+O problema da Cobertura Mínima consiste em encontrar uma cobertura com cardinalidade mínima $|S|$. Trata-se de um problema NP-difícil pertencente à lista clássica de 21 problemas de Karp (1972). Portanto, para grafos de médias e grandes escalas, faz-se necessário o emprego de métodos aproximados.
+
+\subsection{Abordagem Gulosa (Grau Residual)}
+A estratégia gulosa seleciona iterativamente o vértice que cobre a maior quantidade de arestas ainda descobertas (maior grau residual):
+\begin{enumerate}
+    \item Identifica o nó $v^* = \arg\max_{v} d_{\text{residual}}(v)$.
+    \item Adiciona $v^*$ ao conjunto solução $S$.
+    \item Remove todas as arestas incidentes em $v^*$.
+    \item Repete o processo até que todas as arestas estejam cobertas.
+\end{enumerate}
+
+Essa heurística apresenta fator de aproximação de $O(\log |V|)$ no pior caso.
+
+\subsection{Abordagem Heurística Alternativa}
+Como método comparativo, implementou-se a heurística clássica de 2-aproximação baseada em emparelhamento maximal de arestas: seleciona-se repetidamente uma aresta arbitrária $\{u, v\}$ ainda descoberta e inclui-se ambos os vértices $u$ e $v$ na cobertura, eliminando todas as arestas incidentes em ambos. 
+
+Essa abordagem garante teoricamente que o tamanho da solução nunca excederá duas vezes a cobertura ótima ($|S| \le 2 \cdot |S^*|$), operando em tempo estritamente linear $O(|V| + |E|)$.
+
+\begin{lstlisting}[caption={Heurísticas de Cobertura de Vértices em \texttt{cobertura.py}}, label={cod:cobertura}]
+def cobertura_gulosa(grafo: Grafo) -> set[int]:
+    arestas_restantes = set()
+    for u in range(1, grafo.ordem() + 1):
+        for v in grafo.vizinhos(u):
+            if u < v: arestas_restantes.add((u, v))
+
+    cobertura = set()
+    while arestas_restantes:
+        grau_residual = {}
+        for u, v in arestas_restantes:
+            grau_residual[u] = grau_residual.get(u, 0) + 1
+            grau_residual[v] = grau_residual.get(v, 0) + 1
+
+        melhor_vertice = max(grau_residual, key=grau_residual.get)
+        cobertura.add(melhor_vertice)
+        arestas_restantes = {e for e in arestas_restantes if melhor_vertice not in e}
+
+    return cobertura
+\end{lstlisting}
+
+% ==============================================================================
+% 7. RESULTADOS EXPERIMENTAIS E VALIDAÇÃO DAS INSTÂNCIAS
+% ==============================================================================
+\section{Resultados Experimentais e Validação das Instâncias}
+
+Para validar a integridade dos quatro novos módulos, foram processadas as quatro instâncias padronizadas.
+
+\subsection{Instância 1 -- Grafo Pequeno e Validação Manual}
+A Instância 1 contempla uma rede com $|V|=10$ vértices e $|E|=13$ arestas, estritamente conexa e com pesos reais positivos distintos, desenhada para permitir a conferência analítica completa.
+
+\begin{table}[H]
+    \centering
+    \caption{Resultados Consolidados na Instância 1}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        \textbf{Métrica / Algoritmo} & \textbf{Resultado Obtido} & \textbf{Validação Analítica} \\ \midrule
+        Circuito Euleriano & Possui (Graus pares) & $\forall v \in V, d(v) \in \{2, 4\}$ \\
+        Custo Total da AGM & 20.70 & Somatório de 9 arestas mínimas \\
+        Diâmetro do Grafo & 11.20 & Maior distância geodésica (Vértices 4 e 6) \\
+        Raio do Grafo & 7.10 & Menor excentricidade \\
+        Centro do Grafo & Vértice 5 & $\epsilon(5) = 7.10$ \\
+        Cobertura Gulosa & 6 vértices & Vértices selecionados: $\{2, 3, 5, 7, 8, 10\}$ \\
+        Cobertura Heurística (2-aprox) & 6 vértices & Solução admissível de cardinalidade 6 \\ \bottomrule
+    \end{tabular}%
+    }
+    \label{tab:res_inst1_tp2}
+\end{table}
+
+\subsubsection*{Validação Manual da Árvore Geradora Mínima (Kruskal)}
+Ordenando as 13 arestas em ordem estritamente crescente de pesos:
+\begin{enumerate}
+    \item $(1, 3)$ peso $1.20$ -- inserida (conjuntos disjuntos).
+    \item $(8, 10)$ peso $1.50$ -- inserida.
+    \item $(4, 7)$ peso $1.80$ -- inserida.
+    \item $(7, 9)$ peso $2.00$ -- inserida.
+    \item $(3, 5)$ peso $2.10$ -- inserida.
+    \item $(5, 7)$ peso $2.30$ -- inserida (conecta $\{1,3,5\}$ a $\{4,7,9\}$).
+    \item $(1, 2)$ peso $2.50$ -- inserida.
+    \item $(2, 4)$ peso $3.00$ -- \textbf{descartada} (forma ciclo $1-2-4-7-5-3-1$).
+    \item $(9, 10)$ peso $3.10$ -- inserida (conecta $\{8,10\}$ ao componente principal).
+    \item $(5, 8)$ peso $3.70$ -- \textbf{descartada} (vértices já conectados via 9 e 10).
+    \item $(6, 8)$ peso $4.20$ -- inserida (anexa o vértice 6).
+\end{enumerate}
+Atingidas $10 - 1 = 9$ arestas, o algoritmo encerra. O somatório dos pesos das arestas selecionadas é:
+\begin{equation}
+    1.2 + 1.5 + 1.8 + 2.0 + 2.1 + 2.3 + 2.5 + 3.1 + 4.2 = \mathbf{20.70}
+\end{equation}
+O Algoritmo de Prim produziu exatamente a mesma árvore e custo idêntico ($20.70$), comprovando a corretude da implementação.
+
+\subsubsection*{Validação das Excentricidades}
+A tabela \ref{tab:exc_inst1} demonstra as excentricidades obtidas via Dijkstra a partir de cada nó:
+\begin{table}[H]
+    \centering
+    \caption{Excentricidades Calculadas para a Instância 1}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}ccccccccccc@{}}
+        \toprule
+        \textbf{Vértice} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\ \midrule
+        \textbf{$\epsilon(v)$} & 8.50 & 9.70 & 7.30 & 11.20 & 7.10 & 11.20 & 9.40 & 8.20 & 8.80 & 9.70 \\ \bottomrule
+    \end{tabular}%
+    }
+    \label{tab:exc_inst1}
+\end{table}
+Verifica-se analiticamente que $\text{diam}(G) = \max_v \epsilon(v) = 11.20$ (atingido pelos vértices periféricos 4 e 6) e $\text{rad}(G) = \min_v \epsilon(v) = 7.10$, com centro único em $v = 5$.
+
+\subsection{Instância 2 -- Grafo com Características Estruturais Específicas ($|V|=20$)}
+A Instância 2 foi planejada para explorar situações estruturais peculiares:
+\begin{itemize}
+    \item \textbf{Circuito Euleriano:} A presença intencional de nós com graus ímpares faz com que o algoritmo de teste retorne corretamente \texttt{Falso}, comprovando que o sistema lida de forma segura com grafos não-eulerianos.
+    \item \textbf{Múltiplas AGMs:} Inserção de arestas com pesos idênticos, permitindo verificar empates de ordenação no Kruskal.
+    \item \textbf{Disparidade de Cobertura:} Graus altamente desbalanceados (hubs centrais e nós folhas), permitindo que a abordagem gulosa supere expressivamente a heurística ingênua de 2-aproximação em cardinalidade.
+\end{itemize}
+
+\subsection{Instância 3 -- Grafo Esparso ($|V|=80, |E|=114$)}
+A Instância 3 representa uma rede com 80 nós e densidade relativa reduzida ($D \approx 0.0361$).
+\begin{itemize}
+    \item \textbf{AGM:} O algoritmo de Kruskal selecionou 79 arestas totalizando custo de \textbf{453.90}.
+    \item \textbf{Métricas de Distância:} Por se tratar de um grafo predominantemente linear e ramificado, o diâmetro atingiu \textbf{85.20} e o raio registrou \textbf{42.90}, tendo o vértice \textbf{75} como centro topológico.
+    \item \textbf{Cobertura de Vértices:} O método guloso selecionou 44 vértices, cobrindo integralmente as 114 conexões em menos de $1.2\text{ ms}$.
+\end{itemize}
+
+\subsection{Instância 4 -- Grafo Denso de Grande Porte ($|V|=500, |E|=6.717$)}
+A Instância 4 submete a biblioteca ao teste de estresse temporal e de escalabilidade combinatória.
+
+\begin{table}[H]
+    \centering
+    \caption{Comparativo de Desempenho e Cobertura nas 4 Instâncias}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}lcccc@{}}
+        \toprule
+        \textbf{Instância} & \textbf{Custo AGM} & \textbf{Diâmetro} & \textbf{Cobertura Gulosa} & \textbf{Cobertura Heurística} \\
+        & & & \textbf{(Vértices / Tempo)} & \textbf{(Vértices / Tempo)} \\ \midrule
+        Instância 1 (10 v) & 20.70 & 11.20 & 6 nós ($< 0.1\text{ ms}$) & 6 nós ($< 0.1\text{ ms}$) \\
+        Instância 2 (20 v) & 48.50 & 18.40 & 11 nós ($0.2\text{ ms}$) & 14 nós ($0.1\text{ ms}$) \\
+        Instância 3 (80 v) & 453.90 & 85.20 & 44 nós ($1.1\text{ ms}$) & 58 nós ($0.3\text{ ms}$) \\
+        Instância 4 (500 v) & 907.94 & 16.80 & 287 nós ($18.5\text{ ms}$) & 362 nós ($4.2\text{ ms}$) \\ \bottomrule
+    \end{tabular}%
+    }
+    \label{tab:comparativo_final}
+\end{table}
+
+\textbf{Análise Crítica:} A tabela \ref{tab:comparativo_final} evidencia o clássico compromisso entre qualidade de solução e custo computacional:
+\begin{itemize}
+    \item A abordagem gulosa sistematicamente obtém soluções de menor cardinalidade (economizando até 20\% no total de vértices na Instância 4), pois reavalia dinamicamente o impacto do grau residual.
+    \item A heurística de 2-aproximação, embora produza coberturas ligeiramente maiores, executa com tempo significativamente inferior em redes densas, já que não requer o recalculo iterativo de graus.
+\end{itemize}
+
+% ==============================================================================
+% 8. GUIA DE EXECUÇÃO ATUALIZADO
+% ==============================================================================
+\section{Instruções de Execução do Programa}
+
+O programa principal estendido é disparado pelo console:
+\begin{lstlisting}[language=bash, numbers=none]
+$ python main.py
+\end{lstlisting}
+
+O menu oferece 14 opções interativas:
+\begin{lstlisting}[language=bash, numbers=none]
+========================================
+        ANALISE DE REDE SOCIAL
+========================================
+1  - Informar ordem do grafo
+2  - Informar tamanho do grafo
+3  - Calcular densidade
+4  - Informar vizinhos de um vertice
+5  - Informar grau de um vertice
+6  - Verificar se um vertice e articulacao
+7  - Executar busca em largura
+8  - Identificar componentes conexas
+9  - Verificar existencia de ciclos
+10 - Calcular caminhos minimos
+11 - Verificar circuito Euleriano
+12 - Determinar Arvore Geradora Minima
+13 - Calcular metricas (excentricidade, diametro, raio)
+14 - Cobertura minima de vertices
+0  - Sair
+========================================
+\end{lstlisting}
+
+% ==============================================================================
+% 9. CONCLUSÃO
+% ==============================================================================
+\section{Conclusão}
+
+A extensão implementada no Trabalho Prático II cumpriu com êxito todas as diretrizes propostas na disciplina CCF-331. A integração dos algoritmos de Hierholzer, Kruskal, Prim e Dijkstra permitiu transformar a biblioteca básica em uma ferramenta de análise estrutural abrangente, capaz de abordar desde percursos eulerianos exatos até problemas aproximados de alta complexidade computacional como a Cobertura Mínima de Vértices.
+
+A decomposição modular possibilitou que os membros do grupo desenvolvessem suas atribuições com autonomia, mantendo compatibilidade direta através de interfaces de dados claras e coesas. As avaliações experimentais comprovaram a corretude formal dos métodos e sua escalabilidade satisfatória para instâncias de centenas de vértices.
+
+% ==============================================================================
+% REFERÊNCIAS BIBLIOGRÁFICAS
+% ==============================================================================
+\begin{thebibliography}{99}
+    \bibitem{cormen} CORMEN, T. H.; LEISERSON, C. E.; RIVEST, R. L.; STEIN, C. \textbf{Algoritmos: Teoria e Prática}. 3. ed. Rio de Janeiro: Elsevier, 2012.
+    \bibitem{szwarcfiter} SZWARCFITER, J. L. \textbf{Grafos e Algoritmos Computacionais}. Rio de Janeiro: Campus, 1984.
+    \bibitem{bondy} BONDY, J. A.; MURTY, U. S. R. \textbf{Graph Theory with Applications}. London: Macmillan, 1976.
+    \bibitem{karp} KARP, R. M. \textbf{Reducibility among combinatorial problems}. In: Complexity of Computer Computations. Plenum Press, p. 85--103, 1972.
+    \bibitem{kruskal} KRUSKAL, J. B. \textbf{On the shortest spanning subtree of a graph and the traveling salesman problem}. Proceedings of the American Mathematical Society, v. 7, n. 1, p. 48--50, 1956.
+    \bibitem{prim} PRIM, R. C. \textbf{Shortest connection networks and some generalizations}. Bell System Technical Journal, v. 36, n. 6, p. 1389--1401, 1957.
+    \bibitem{hierholzer} HIERHOLZER, C. \textbf{Über die Möglichkeit, einen Linienzug ohne Wiederholung und ohne Unterbrechung zu umfahren}. Mathematische Annalen, v. 6, n. 1, p. 30--32, 1873.
+\end{thebibliography}
+
+\end{document}
