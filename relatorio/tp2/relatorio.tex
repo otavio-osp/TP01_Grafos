@@ -124,9 +124,9 @@ A arquitetura manteve a filosofia de baixo acoplamento adotada no módulo inicia
 \end{itemize}
 
 % ==============================================================================
-% 3. CIRCUITO EULERIANO
+% 3. CIRCUITO EULERIANO (INTEGRANTE 1: GABRIEL)
 % ==============================================================================
-\section{Circuito Euleriano}
+\section{Circuito Euleriano (Integrante 1: Gabriel)}
 
 \subsection{Fundamentação Teórica}
 Um circuito em um grafo conexo $G = (V, E)$ é classificado como \textbf{Euleriano} se e somente se é um circuito fechado simples que contém todas as arestas de $G$ exatamente uma vez. 
@@ -136,24 +136,25 @@ De acordo com o célebre Teorema de Euler (1736):
     \textit{Um grafo não direcionado conexo admite um circuito Euleriano se e somente se todos os seus vértices possuem grau par.}
 \end{quote}
 
-Portanto, a verificação prévia consiste em:
+Portanto, a verificação prévia implementada na função \texttt{tem\_circuito\_euleriano} consiste em duas etapas obrigatórias:
 \begin{enumerate}
-    \item Verificar se o grafo é conexo (desconsiderando vértices isolados, se houver).
-    \item Verificar se para todo $v \in V$, $d(v) \equiv 0 \pmod 2$.
+    \item \textbf{Verificação de Paridade de Graus:} Para todo vértice $v \in V$, exige-se que $d(v) \equiv 0 \pmod 2$. A ocorrência de um único nó com grau ímpar invalida imediatamente a existência do circuito.
+    \item \textbf{Verificação de Conectividade Efetiva:} Todos os vértices que possuem grau estritamente positivo ($d(v) > 0$) devem pertencer a uma mesma componente conexa. A conferência é realizada por meio de uma Busca em Largura (BFS) disparada a partir do primeiro nó com arestas incidentes, assegurando complexidade $O(|V| + |E|)$. Nós isolados ($d(v) = 0$), se existirem, são desconsiderados conforme a definição formal.
 \end{enumerate}
 
 \subsection{Algoritmo de Hierholzer}
-Caso as condições de existência sejam satisfeitas, a extração efetiva do circuito é realizada pelo \textbf{Algoritmo de Hierholzer (1873)}. O procedimento opera mantendo uma pilha de vértices em exploração e construindo o circuito por meio da junção de subciclos:
+Caso as condições de existência sejam satisfeitas, a extração efetiva do circuito é realizada pelo \textbf{Algoritmo de Hierholzer (1873)}. O procedimento opera mantendo uma pilha de vértices em exploração e construindo o circuito por meio da junção sistemática de subciclos:
 
 \begin{enumerate}
-    \item Inicia-se em um vértice arbitrário $u$ de grau não nulo.
-    \item Realiza-se um passeio em profundidade, removendo as arestas visitadas até que não haja vizinhos disponíveis (retornando ao ponto de partida devido à paridade par dos graus).
+    \item Inicia-se em um vértice arbitrário $u$ de grau não nulo (adotando $u = 1$ por padrão).
+    \item Realiza-se um passeio em profundidade, removendo as arestas visitadas da lista de adjacências bidirecional até que não haja vizinhos disponíveis (retornando ao ponto de partida devido à paridade par dos graus).
     \item Enquanto a pilha não estiver vazia: se o vértice no topo ainda possui arestas incidentes não percorridas, inicia-se um novo subciclo a partir dele; caso contrário, desempilha-se o vértice e insere-se na sequência final do circuito.
+    \item Ao término, inverte-se a lista de vértices desempilhados para obter o circuito na ordem cronológica de percurso.
 \end{enumerate}
 
 Como cada aresta é percorrida e removida uma única vez, a complexidade de tempo do método é linear: $O(|V| + |E|)$.
 
-\begin{lstlisting}[caption={Estrutura de Hierholzer em \texttt{euler.py}}, label={cod:euler}]
+\begin{lstlisting}[caption={Algoritmo de Hierholzer em \texttt{euler.py}}, label={cod:euler}]
 def circuito_euleriano(grafo):
     if not tem_circuito_euleriano(grafo):
         return None
@@ -161,7 +162,14 @@ def circuito_euleriano(grafo):
     # Copia a lista de adjacencias para permitir remocao de arestas
     adj = {u: list(grafo.vizinhos(u)) for u in range(1, grafo.ordem() + 1)}
     
-    pilha = [1]
+    # Ponto de partida: primeiro vertice com arestas
+    inicio = 1
+    for v in range(1, grafo.ordem() + 1):
+        if len(adj[v]) > 0:
+            inicio = v
+            break
+
+    pilha = [inicio]
     circuito = []
 
     while pilha:
@@ -358,8 +366,21 @@ def cobertura_heuristica(grafo: Grafo, num_iteracoes: int = 25, alpha: float = 0
 
 Para validar a integridade dos quatro novos módulos e confrontar a qualidade e escalabilidade das abordagens, processaram-se sistematicamente as quatro instâncias padronizadas.
 
-\subsection{Instância 1 -- Grafo Pequeno e Validação Manual}
-A Instância 1 contempla uma rede com $|V|=10$ vértices e $|E|=13$ arestas, estritamente conexa e com pesos reais positivos distintos, desenhada para permitir a conferência analítica completa.
+\subsection{Instância 1 -- Grafo Pequeno e Validação Manual (Integrante 1: Gabriel)}
+A Instância 1 foi projetada pelo Integrante 1 (Gabriel Marcos de Oliveira Félix) no arquivo \texttt{instancia1.txt} para atender estritamente a todos os requisitos estruturais fixados no plano de trabalho:
+\begin{itemize}
+    \item \textbf{Ordem:} $|V| = 10$ vértices (compreendido no intervalo obrigatório de 8 a 15).
+    \item \textbf{Tamanho e Conexão:} $|E| = 15$ arestas, formando um grafo estritamente conexo.
+    \item \textbf{Pesos Reais Positivos Distintos:} Todas as 15 arestas possuem pesos reais positivos estritamente diferentes entre si (variando de $1.20$ a $6.50$).
+    \item \textbf{Graus Pares Obrigatórios:} Todos os 10 vértices possuem grau par:
+    \begin{equation}
+        d(1)=2, \quad d(2)=4, \quad d(3)=4, \quad d(4)=2, \quad d(5)=4,
+    \end{equation}
+    \begin{equation}
+        d(6)=2, \quad d(7)=4, \quad d(8)=4, \quad d(9)=2, \quad d(10)=2.
+    \end{equation}
+    Logo, satisfaz $\forall v \in V, d(v) \in \{2, 4\}$, viabilizando a existência do Circuito Euleriano.
+\end{itemize}
 
 \begin{table}[H]
     \centering
@@ -368,44 +389,55 @@ A Instância 1 contempla uma rede com $|V|=10$ vértices e $|E|=13$ arestas, est
     \begin{tabular}{@{}lll@{}}
         \toprule
         \textbf{Métrica / Algoritmo} & \textbf{Resultado Obtido} & \textbf{Validação Analítica} \\ \midrule
-        Circuito Euleriano & Possui (Graus pares) & $\forall v \in V, d(v) \in \{2, 4\}$ \\
+        Circuito Euleriano & Possui (Graus pares) & Rota com 15 arestas: $1 \to 3 \to 6 \to \dots \to 1$ \\
         Custo Total da AGM & 20.70 & Somatório de 9 arestas mínimas \\
         Diâmetro do Grafo & 11.20 & Maior distância geodésica (Vértices 4 e 6) \\
         Raio do Grafo & 7.10 & Menor excentricidade \\
         Centro do Grafo & Vértice 5 & $\epsilon(5) = 7.10$ \\
-        Cobertura Gulosa & 6 vértices ($0.021\text{ ms}$) & Vértices selecionados: $\{1, 4, 5, 6, 8, 9\}$ \\
-        Cobertura GRASP (Heurística) & \textbf{5 vértices} ($0.591\text{ ms}$) & Solução estritamente ótima: $\{2, 3, 7, 8, 9\}$ \\
-        Cobertura 2-Aproximação & 8 vértices ($0.009\text{ ms}$) & Cobre 100\% das arestas (sobrestimação) \\ \bottomrule
+        Cobertura Gulosa & \textbf{5 vértices} ($0.085\text{ ms}$) & Solução ótima global: $\{2, 3, 7, 8, 9\}$ \\
+        Cobertura GRASP (Heurística) & \textbf{5 vértices} ($3.328\text{ ms}$) & Solução ótima global: $\{2, 3, 7, 8, 9\}$ \\
+        Cobertura 2-Aproximação & 8 vértices ($0.028\text{ ms}$) & Vértices: $\{2, 3, 4, 5, 6, 8, 9, 10\}$ \\ \bottomrule
     \end{tabular}%
     }
     \label{tab:res_inst1_tp2}
-    \vspace{0.1cm}
-    \small{\textit{Nota: O método GRASP superou o guloso puro ao encontrar a cobertura global ótima com apenas 5 vértices.}}
 \end{table}
 
-\subsubsection*{Validação Manual da Árvore Geradora Mínima (Kruskal)}
-Ordenando as 13 arestas em ordem estritamente crescente de pesos:
-\begin{enumerate}
-    \item $(1, 3)$ peso $1.20$ -- inserida (conjuntos disjuntos).
-    \item $(8, 10)$ peso $1.50$ -- inserida.
-    \item $(4, 7)$ peso $1.80$ -- inserida.
-    \item $(7, 9)$ peso $2.00$ -- inserida.
-    \item $(3, 5)$ peso $2.10$ -- inserida.
-    \item $(5, 7)$ peso $2.30$ -- inserida (conecta $\{1,3,5\}$ a $\{4,7,9\}$).
-    \item $(1, 2)$ peso $2.50$ -- inserida.
-    \item $(2, 4)$ peso $3.00$ -- \textbf{descartada} (forma ciclo $1-2-4-7-5-3-1$).
-    \item $(9, 10)$ peso $3.10$ -- inserida (conecta $\{8,10\}$ ao componente principal).
-    \item $(5, 8)$ peso $3.70$ -- \textbf{descartada} (vértices já conectados via 9 e 10).
-    \item $(6, 8)$ peso $4.20$ -- inserida (anexa o vértice 6).
-\end{enumerate}
-Atingidas $10 - 1 = 9$ arestas, o algoritmo encerra. O somatório dos pesos das arestas selecionadas é:
+\subsubsection*{Validação Analítica do Circuito Euleriano (Hierholzer)}
+Como todos os vértices possuem grau par e o grafo é conexo, a existência de circuito Euleriano é garantida pelo Teorema de Euler. O Algoritmo de Hierholzer, disparado a partir do vértice 1, produziu a seguinte sequência ordenada de 16 vértices (15 travessias de arestas):
 \begin{equation}
-    1.2 + 1.5 + 1.8 + 2.0 + 2.1 + 2.3 + 2.5 + 3.1 + 4.2 = \mathbf{20.70}
+    1 \to 3 \to 6 \to 8 \to 10 \to 9 \to 7 \to 8 \to 5 \to 7 \to 4 \to 2 \to 5 \to 3 \to 2 \to 1
 \end{equation}
-O Algoritmo de Prim produziu exatamente a mesma árvore e custo idêntico ($20.70$), comprovando a corretude da implementação.
+Conferindo aresta a aresta:
+$(1,3), (3,6), (6,8), (8,10), (10,9), (9,7), (7,8), (8,5), (5,7), (7,4), (4,2), (2,5), (5,3), (3,2), (2,1)$.
+Todas as 15 arestas do grafo foram percorridas exatamente uma vez e o percurso fechou no vértice inicial 1, atestando a exatidão da implementação.
 
-\subsubsection*{Validação das Excentricidades}
-A tabela \ref{tab:exc_inst1} demonstra as excentricidades obtidas via Dijkstra a partir de cada nó:
+\subsubsection*{Validação Manual da Árvore Geradora Mínima (Kruskal e Prim)}
+Ordenando todas as 15 arestas em ordem estritamente crescente de pesos:
+\begin{enumerate}
+    \item $(1, 3)$ peso $1.20$ -- inserida (conjuntos $\{1\}, \{3\}$ disjuntos).
+    \item $(8, 10)$ peso $1.50$ -- inserida (conjuntos $\{8\}, \{10\}$ disjuntos).
+    \item $(4, 7)$ peso $1.80$ -- inserida (conjuntos $\{4\}, \{7\}$ disjuntos).
+    \item $(7, 9)$ peso $2.00$ -- inserida (une $\{4, 7\}$ e $\{9\}$).
+    \item $(3, 5)$ peso $2.10$ -- inserida (une $\{1, 3\}$ e $\{5\}$).
+    \item $(5, 7)$ peso $2.30$ -- inserida (une $\{1, 3, 5\}$ e $\{4, 7, 9\}$).
+    \item $(1, 2)$ peso $2.50$ -- inserida (anexa o vértice 2).
+    \item $(2, 4)$ peso $3.00$ -- \textbf{descartada} (ambos já conectados, formaria ciclo).
+    \item $(9, 10)$ peso $3.10$ -- inserida (conecta o componente $\{8, 10\}$ ao bloco principal).
+    \item $(5, 8)$ peso $3.70$ -- \textbf{descartada} (vértices 5 e 8 já pertencem ao mesmo conjunto).
+    \item $(6, 8)$ peso $4.20$ -- inserida (anexa o vértice 6; 9ª aresta selecionada, encerra o algoritmo).
+    \item $(2, 5)$ peso $4.50$ -- \textbf{descartada}.
+    \item $(3, 6)$ peso $5.00$ -- \textbf{descartada}.
+    \item $(2, 3)$ peso $5.50$ -- \textbf{descartada}.
+    \item $(7, 8)$ peso $6.50$ -- \textbf{descartada}.
+\end{enumerate}
+Atingidas $|V| - 1 = 9$ arestas, o algoritmo encerra. O custo total da árvore geradora é:
+\begin{equation}
+    1.20 + 1.50 + 1.80 + 2.00 + 2.10 + 2.30 + 2.50 + 3.10 + 4.20 = \mathbf{20.70}
+\end{equation}
+O Algoritmo de Prim, inicializado no vértice raiz 1, convergiu rigorosamente para o mesmo conjunto de arestas e custo idêntico de $20.70$.
+
+\subsubsection*{Validação Manual das Excentricidades, Diâmetro e Raio}
+A tabela \ref{tab:exc_inst1} apresenta as excentricidades obtidas via caminhos mínimos (Dijkstra) a partir de cada vértice:
 \begin{table}[H]
     \centering
     \caption{Excentricidades Calculadas para a Instância 1}
@@ -418,7 +450,17 @@ A tabela \ref{tab:exc_inst1} demonstra as excentricidades obtidas via Dijkstra a
     }
     \label{tab:exc_inst1}
 \end{table}
-Verifica-se analiticamente que $\text{diam}(G) = \max_v \epsilon(v) = 11.20$ (atingido pelos vértices periféricos 4 e 6) e $\text{rad}(G) = \min_v \epsilon(v) = 7.10$, com centro único em $v = 5$.
+Verifica-se analiticamente que $\text{diam}(G) = \max_v \epsilon(v) = 11.20$ (atingido pelo par periférico 4 e 6) e $\text{rad}(G) = \min_v \epsilon(v) = 7.10$, com centro topológico único no nó $v = 5$.
+
+\subsubsection*{Validação Manual da Cobertura Mínima de Vértices}
+Pode-se comprovar matematicamente que o tamanho mínimo de qualquer cobertura para este grafo é 5. Tomando o conjunto de 5 arestas mutualmente independentes (emparelhamento disjunto):
+\begin{equation}
+    M = \{(1, 2), (3, 5), (4, 7), (6, 8), (9, 10)\}
+\end{equation}
+Como nenhuma dessas arestas compartilha vértices, qualquer cobertura válida precisa conter pelo menos um extremo de cada uma, exigindo $|S^*| \ge |M| = 5$.
+
+O subconjunto $S = \{2, 3, 7, 8, 9\}$ cobre rigorosamente todas as 15 arestas do grafo:
+os nós 2, 3, 7 e 8 cobrem todas as arestas incidentes em 1, 4, 5 e 6, e o vértice 9 cobre as conexões $(7, 9)$ e $(9, 10)$. Como $|S| = 5$, trata-se comprovadamente da solução ótima global mínima. Tanto o Algoritmo Guloso quanto o procedimento GRASP convergiram com perfeição para esta solução ótima minimal de 5 vértices.
 
 \subsection{Instância 2 -- Grafo Heterogêneo com Características Específicas ($|V|=20, |E|=33$)}
 A Instância 2 foi expressamente planejada pelo Integrante 3 (Otávio Soares Pedroso) no arquivo \texttt{instancia2.txt} para averiguar três condições estruturais críticas:
@@ -454,10 +496,10 @@ A Instância 4 foi gerada pelo Integrante 3 (Otávio Soares Pedroso) no arquivo 
         \toprule
         \textbf{Instância} & \textbf{Ordem / Arestas} & \textbf{Densidade} & \textbf{Custo AGM} & \textbf{Diâmetro} & \textbf{Cobertura Gulosa} & \textbf{Cobertura GRASP} \\
         & $(|V| \text{ / } |E|)$ & Relativa & & & \textbf{(Vértices / Tempo)} & \textbf{(Vértices / Tempo)} \\ \midrule
-        Instância 1 & 10 / 13 & 28.89\% & 20.70 & 11.20 & 6 nós ($0.021\text{ ms}$) & \textbf{5 nós} ($0.591\text{ ms}$) \\
-        Instância 2 & 20 / 33 & 17.37\% & 48.50 & 25.00 & 12 nós ($0.036\text{ ms}$) & \textbf{11 nós} ($1.767\text{ ms}$) \\
-        Instância 3 & 80 / 114 & 3.61\% & 453.90 & 85.20 & 45 nós ($0.322\text{ ms}$) & 45 nós ($17.478\text{ ms}$) \\
-        Instância 4 & 250 / 10.893 & 35.00\% & 415.99 & 14.01 & 237 nós ($6.139\text{ ms}$) & \textbf{236 nós} ($305.864\text{ ms}$) \\ \bottomrule
+        Instância 1 & 10 / 15 & 33.33\% & 20.70 & 11.20 & \textbf{5 nós} ($0.085\text{ ms}$) & \textbf{5 nós} ($3.328\text{ ms}$) \\
+        Instância 2 & 20 / 33 & 17.37\% & 48.50 & 25.00 & 12 nós ($0.117\text{ ms}$) & \textbf{11 nós} ($5.807\text{ ms}$) \\
+        Instância 3 & 80 / 114 & 3.61\% & 453.90 & 85.20 & 45 nós ($0.970\text{ ms}$) & 45 nós ($63.291\text{ ms}$) \\
+        Instância 4 & 250 / 10.893 & 35.00\% & 415.99 & 14.01 & 237 nós ($22.227\text{ ms}$) & \textbf{236 nós} ($1373.515\text{ ms}$) \\ \bottomrule
     \end{tabular}%
     }
     \label{tab:comparativo_final}
@@ -466,9 +508,9 @@ A Instância 4 foi gerada pelo Integrante 3 (Otávio Soares Pedroso) no arquivo 
 \subsection{Discussão Crítica: Qualidade da Solução vs. Tempo Computacional}
 A análise comparativa entre as abordagens implementadas para o MVC revela percepções teóricas e práticas fundamentais:
 \begin{enumerate}
-    \item \textbf{Eficácia da Busca Local e GRASP:} Em todas as instâncias heterogêneas (Instâncias 1, 2 e 4), o algoritmo GRASP conseguiu encontrar coberturas estritamente menores do que o guloso puro. Na Instância 1, o guloso estagnou no ótimo local de cardinalidade 6, enquanto o GRASP descobriu a cobertura ótima global de 5 vértices. Na Instância 2, a poda de redundâncias eliminou nós subótimos, reduzindo a cobertura de 12 para 11 vértices. Esse ganho qualitativo justifica o tempo adicional de execução ($0.59\text{ ms}$ a $305\text{ ms}$), que permanece imperceptível na escala de interação humana.
-    \item \textbf{Eficiência Temporal do Guloso Dinâmico:} O algoritmo guloso por grau residual mostrou-se extremamente competitivo. Mesmo na Instância 4, sob carga estressante de mais de 10 mil arestas, a seleção gulosa consumiu meros $6.14\text{ ms}$ e produziu uma solução com apenas 1 nó a mais do que a meta-heurística. Esse resultado atesta a qualidade da ordenação adaptativa em grafos de alta densidade.
-    \item \textbf{Limitações da 2-Aproximação Estática:} Embora a 2-aproximação clássica por emparelhamento maximal seja teoricamente atrativa pelo tempo $O(|E|)$ e garantia de pior caso, sua cardinalidade na prática mostrou-se substancialmente inflacionada (16 nós na Instância 2 contra 11 do GRASP; 68 na Instância 3 contra 45; 248 na Instância 4 contra 236). Como o método obriga a inclusão dos dois vértices da aresta independentemente de sua conectividade residual, ele frequentemente inclui folhas e nós de grau unitário desnecessários.
+    \item \textbf{Eficácia da Busca Local e GRASP:} Em grafos heterogêneos de média e grande escala (Instâncias 2 e 4), o algoritmo GRASP superou o guloso puro ao escapar de armadilhas de ótimos locais. Na Instância 2, a fase de busca local com poda de nós redundantes eliminou vértices desnecessários, reduzindo a cobertura de 12 para 11 vértices. Na Instância 4 (10.893 arestas), o GRASP encontrou uma cobertura com 236 vértices contra 237 do guloso. Na Instância 1, tanto o Guloso quanto o GRASP convergiram com perfeição para o ótimo global comprovado de 5 vértices ($\{2, 3, 7, 8, 9\}$).
+    \item \textbf{Eficiência Temporal do Guloso Dinâmico:} O algoritmo guloso por grau residual mostrou-se extremamente rápido e competitivo. Mesmo na Instância 4, sob carga estressante de quase 11 mil arestas, a seleção gulosa consumiu apenas $22.23\text{ ms}$ e produziu uma solução a apenas 1 vértice da meta-heurística. Esse resultado atesta a qualidade da ordenação adaptativa em grafos de alta densidade.
+    \item \textbf{Limitações da 2-Aproximação Estática:} Embora a 2-aproximação clássica por emparelhamento maximal seja teoricamente atrativa pelo tempo $O(|E|)$ e garantia de pior caso, sua cardinalidade na prática mostrou-se substancialmente inflacionada (8 nós na Instância 1; 16 nós na Instância 2 contra 11 do GRASP; 68 na Instância 3 contra 45; 248 na Instância 4 contra 236). Como o método obriga a inclusão dos dois vértices da aresta independentemente de sua conectividade residual, ele frequentemente inclui folhas e nós de grau unitário desnecessários.
 \end{enumerate}
 
 % ==============================================================================
