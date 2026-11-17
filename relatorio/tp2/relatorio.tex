@@ -106,7 +106,7 @@ O presente Trabalho Prático II tem como objetivo estender as capacidades comput
     \item \textbf{Cobertura Mínima de Vértices:} Resolução de um problema clássico de otimização combinatória NP-difícil por meio da comparação sistemática entre uma abordagem gulosa (critério de maior grau residual) e uma abordagem heurística alternativa, contrastando cardinalidade e tempo de execução.
 \end{enumerate}
 
-Para validar a implementação, foram geradas quatro instâncias estruturalmente distintas, variando desde grafos de pequeno porte para conferência manual até redes densas de 500 vértices para análise de escalabilidade.
+Para validar a implementação, foram geradas quatro instâncias estruturalmente distintas, variando desde grafos de pequeno porte para conferência manual até redes densas de 250 vértices com mais de 10.800 arestas para análise de estresse e escalabilidade.
 
 % ==============================================================================
 % 2. ARQUITETURA MODULAR ESTENDIDA
@@ -272,46 +272,83 @@ def raio(grafo: Grafo) -> tuple[float, list[int]]:
 % ==============================================================================
 \section{Cobertura Mínima de Vértices}
 
-\subsection{Formulação Matemática}
-Um subconjunto de vértices $S \subseteq V$ é denominado uma \textbf{cobertura de vértices} de $G = (V, E)$ se toda aresta $\{u, v\} \in E$ possui ao menos uma de suas extremidades em $S$, isto é, $\{u, v\} \cap S \ne \emptyset$. 
+\subsection{Formulação Matemática e Complexidade}
+Dada uma rede não direcionada $G = (V, E)$, um subconjunto de vértices $S \subseteq V$ é denominado uma \textbf{cobertura de vértices} (\textit{Vertex Cover}) se toda aresta $\{u, v\} \in E$ possui pelo menos um de seus extremos pertencente a $S$, isto é:
+\begin{equation}
+    \forall \{u, v\} \in E, \quad \{u, v\} \cap S \neq \emptyset
+\end{equation}
 
-O problema da Cobertura Mínima consiste em encontrar uma cobertura com cardinalidade mínima $|S|$. Trata-se de um problema NP-difícil pertencente à lista clássica de 21 problemas de Karp (1972). Portanto, para grafos de médias e grandes escalas, faz-se necessário o emprego de métodos aproximados.
+O \textbf{Problema da Cobertura Mínima de Vértices} (\textit{Minimum Vertex Cover} -- MVC) consiste em encontrar um conjunto de cobertura $S^* \subseteq V$ com a menor cardinalidade possível $|S^*|$. O MVC integra a célebre lista dos 21 problemas NP-completos clássicos estabelecidos por Richard Karp (1972) em sua versão de decisão, tornando sua versão de otimização estritamente NP-difícil. Portanto, não se conhece algoritmo determinístico exato que encontre a solução ótima em tempo polinomial para grafos gerais, demandando o emprego de algoritmos gulosos de aproximação e meta-heurísticas.
 
-\subsection{Abordagem Gulosa (Grau Residual)}
-A estratégia gulosa seleciona iterativamente o vértice que cobre a maior quantidade de arestas ainda descobertas (maior grau residual):
+\subsection{Algoritmo Guloso (Chvátal / Johnson)}
+A abordagem gulosa clássica para o MVC baseia-se na seleção iterativa do vértice que cobre a maior quantidade de arestas ainda não cobertas (critério do \textbf{maior grau residual}):
 \begin{enumerate}
-    \item Identifica o nó $v^* = \arg\max_{v} d_{\text{residual}}(v)$.
-    \item Adiciona $v^*$ ao conjunto solução $S$.
-    \item Remove todas as arestas incidentes em $v^*$.
-    \item Repete o processo até que todas as arestas estejam cobertas.
+    \item Inicializa-se $S = \emptyset$ e define-se o grau residual de cada nó $v \in V$ como $d_{\text{residual}}(v) = d(v)$.
+    \item Enquanto restarem arestas não cobertas na rede:
+    \begin{itemize}
+        \item Identifica-se o vértice $v^* = \arg\max_{v \in V} d_{\text{residual}}(v)$. Em caso de empate, adota-se o menor índice numérico do vértice para garantir comportamento determinístico e reprodutibilidade.
+        \item Insere-se $v^*$ no conjunto solução $S \leftarrow S \cup \{v^*\}$.
+        \item Para cada vizinho $u$ incidente a $v^*$ por uma aresta ainda não coberta, decrementa-se $d_{\text{residual}}(u) \leftarrow d_{\text{residual}}(u) - 1$.
+        \item Anula-se $d_{\text{residual}}(v^*) \leftarrow 0$ e marcam-se suas arestas incidentes como cobertas.
+    \end{itemize}
+    \item Retorna-se a cobertura $S$.
 \end{enumerate}
 
-Essa heurística apresenta fator de aproximação de $O(\log |V|)$ no pior caso.
+Teoricamente, o algoritmo guloso garante um fator de aproximação de $H(\Delta) = \sum_{i=1}^\Delta \frac{1}{i} \le \ln \Delta + 1 = O(\log |V|)$, onde $\Delta$ representa o grau máximo do grafo. Operando com listas de adjacência residual ativas, a complexidade temporal da implementação é $O(|V| + |E| \log |V|)$, permitindo processar dezenas de milhares de arestas em milissegundos.
 
-\subsection{Abordagem Heurística Alternativa}
-Como método comparativo, implementou-se a heurística clássica de 2-aproximação baseada em emparelhamento maximal de arestas: seleciona-se repetidamente uma aresta arbitrária $\{u, v\}$ ainda descoberta e inclui-se ambos os vértices $u$ e $v$ na cobertura, eliminando todas as arestas incidentes em ambos. 
+\subsection{Meta-heurística GRASP com Busca Local (Poda de Redundâncias)}
+Com o intuito de superar a armadilha de ótimos locais do algoritmo guloso determinístico, implementou-se a meta-heurística \textbf{GRASP} (\textit{Greedy Randomized Adaptive Search Procedure}) estruturada em duas fases interativas repetidas por $M$ iterações:
 
-Essa abordagem garante teoricamente que o tamanho da solução nunca excederá duas vezes a cobertura ótima ($|S| \le 2 \cdot |S^*|$), operando em tempo estritamente linear $O(|V| + |E|)$.
+\subsubsection*{Fase 1: Construção Gulosa Semi-Randomizada}
+A cada passo de seleção, avaliam-se o maior grau residual $d_{\max} = \max_{v} d_{\text{residual}}(v)$ e o menor grau residual positivo $d_{\min} = \min_{v: d_{\text{residual}}(v) > 0} d_{\text{residual}}(v)$. Define-se um patamar de qualidade através do parâmetro $\alpha \in [0, 1]$:
+\begin{equation}
+    \text{Limiar} = d_{\max} - \alpha \cdot (d_{\max} - d_{\min})
+\end{equation}
+Constrói-se a \textbf{Lista Restrita de Candidatos} (\textit{Restricted Candidate List} -- RCL) contendo todos os vértices cujo grau residual satisfaz $d_{\text{residual}}(v) \ge \text{Limiar}$. Um vértice é então sorteado aleatoriamente e de forma uniforme dentro da RCL para ser incorporado à cobertura, promovendo diversificação equilibrada da exploração espacial. Para $\alpha = 0$, o método coincide com o guloso puro; para $\alpha = 1$, torna-se puramente aleatório. Adotou-se empiricamente $\alpha = 0.85$.
 
-\begin{lstlisting}[caption={Heurísticas de Cobertura de Vértices em \texttt{cobertura.py}}, label={cod:cobertura}]
-def cobertura_gulosa(grafo: Grafo) -> set[int]:
-    arestas_restantes = set()
-    for u in range(1, grafo.ordem() + 1):
-        for v in grafo.vizinhos(u):
-            if u < v: arestas_restantes.add((u, v))
+\subsubsection*{Fase 2: Busca Local via Poda de Vértices Redundantes}
+A solução gerada na fase de construção pode conter vértices redundantes -- nós que foram inseridos prematuramente, mas cujas arestas acabaram sendo subsequentemente cobertas por outros vértices escolhidos mais tarde. 
 
-    cobertura = set()
-    while arestas_restantes:
-        grau_residual = {}
-        for u, v in arestas_restantes:
-            grau_residual[u] = grau_residual.get(u, 0) + 1
-            grau_residual[v] = grau_residual.get(v, 0) + 1
+Formalmente, um vértice $u \in S$ é denominado \textbf{redundante} se:
+\begin{equation}
+    \forall v \in V \text{ com } \{u, v\} \in E \implies v \in S
+\end{equation}
+Caso a condição seja satisfeita, todas as arestas incidentes em $u$ continuam cobertas mesmo na ausência de $u$. O procedimento de busca local percorre os vértices da cobertura em ordem crescente de grau original (preservando nós de alta conectividade) e elimina sucessivamente cada nó redundante, garantindo que a cobertura final seja uma \textbf{cobertura minimal} (\textit{irredundant}).
 
-        melhor_vertice = max(grau_residual, key=grau_residual.get)
-        cobertura.add(melhor_vertice)
-        arestas_restantes = {e for e in arestas_restantes if melhor_vertice not in e}
+A melhor cobertura entre todas as iterações é preservada como solução final.
 
-    return cobertura
+\subsection{Heurística de 2-Aproximação (Emparelhamento Maximal)}
+Como linha de base analítica, implementou-se adicionalmente a clássica heurística de 2-aproximação fundamentada em emparelhamento maximal de arestas:
+\begin{enumerate}
+    \item Enquanto existirem arestas não cobertas $\{u, v\} \in E$:
+    \begin{itemize}
+        \item Adicionam-se ambos os vértices $u$ e $v$ ao conjunto $S$.
+        \item Descartam-se todas as arestas incidentes em $u$ ou $v$.
+    \end{itemize}
+\end{enumerate}
+Por selecionar os dois extremos de arestas independentes, o algoritmo assegura teoricamente $|S| \le 2 \cdot |S^*|$ e opera em tempo estritamente linear $O(|V| + |E|)$.
+
+\begin{lstlisting}[caption={Trecho Central do Módulo \texttt{cobertura.py}}, label={cod:cobertura}]
+def poda_redundancias(grafo: Grafo, cobertura: set[int]) -> set[int]:
+    solucao = set(cobertura)
+    candidatos = sorted(solucao, key=lambda v: grafo.grau(v))
+    for u in candidatos:
+        if u not in solucao:
+            continue
+        # u e redundante se todos os seus vizinhos ja estao na solucao
+        if all(viz in solucao for viz in grafo.vizinhos(u)):
+            solucao.remove(u)
+    return solucao
+
+def cobertura_heuristica(grafo: Grafo, num_iteracoes: int = 25, alpha: float = 0.85, seed: int = 42) -> set[int]:
+    rng = random.Random(seed)
+    melhor_solucao = None
+    for _ in range(num_iteracoes):
+        sol_inicial = construcao_gulosa_randomizada(grafo, alpha=alpha, rng=rng)
+        sol_refinada = poda_redundancias(grafo, sol_inicial)
+        if melhor_solucao is None or len(sol_refinada) < len(melhor_solucao):
+            melhor_solucao = sol_refinada
+    return melhor_solucao if melhor_solucao is not None else set()
 \end{lstlisting}
 
 % ==============================================================================
@@ -319,7 +356,7 @@ def cobertura_gulosa(grafo: Grafo) -> set[int]:
 % ==============================================================================
 \section{Resultados Experimentais e Validação das Instâncias}
 
-Para validar a integridade dos quatro novos módulos, foram processadas as quatro instâncias padronizadas.
+Para validar a integridade dos quatro novos módulos e confrontar a qualidade e escalabilidade das abordagens, processaram-se sistematicamente as quatro instâncias padronizadas.
 
 \subsection{Instância 1 -- Grafo Pequeno e Validação Manual}
 A Instância 1 contempla uma rede com $|V|=10$ vértices e $|E|=13$ arestas, estritamente conexa e com pesos reais positivos distintos, desenhada para permitir a conferência analítica completa.
@@ -336,11 +373,14 @@ A Instância 1 contempla uma rede com $|V|=10$ vértices e $|E|=13$ arestas, est
         Diâmetro do Grafo & 11.20 & Maior distância geodésica (Vértices 4 e 6) \\
         Raio do Grafo & 7.10 & Menor excentricidade \\
         Centro do Grafo & Vértice 5 & $\epsilon(5) = 7.10$ \\
-        Cobertura Gulosa & 6 vértices & Vértices selecionados: $\{2, 3, 5, 7, 8, 10\}$ \\
-        Cobertura Heurística (2-aprox) & 6 vértices & Solução admissível de cardinalidade 6 \\ \bottomrule
+        Cobertura Gulosa & 6 vértices ($0.021\text{ ms}$) & Vértices selecionados: $\{1, 4, 5, 6, 8, 9\}$ \\
+        Cobertura GRASP (Heurística) & \textbf{5 vértices} ($0.591\text{ ms}$) & Solução estritamente ótima: $\{2, 3, 7, 8, 9\}$ \\
+        Cobertura 2-Aproximação & 8 vértices ($0.009\text{ ms}$) & Cobre 100\% das arestas (sobrestimação) \\ \bottomrule
     \end{tabular}%
     }
     \label{tab:res_inst1_tp2}
+    \vspace{0.1cm}
+    \small{\textit{Nota: O método GRASP superou o guloso puro ao encontrar a cobertura global ótima com apenas 5 vértices.}}
 \end{table}
 
 \subsubsection*{Validação Manual da Árvore Geradora Mínima (Kruskal)}
@@ -380,47 +420,56 @@ A tabela \ref{tab:exc_inst1} demonstra as excentricidades obtidas via Dijkstra a
 \end{table}
 Verifica-se analiticamente que $\text{diam}(G) = \max_v \epsilon(v) = 11.20$ (atingido pelos vértices periféricos 4 e 6) e $\text{rad}(G) = \min_v \epsilon(v) = 7.10$, com centro único em $v = 5$.
 
-\subsection{Instância 2 -- Grafo com Características Estruturais Específicas ($|V|=20$)}
-A Instância 2 foi planejada para explorar situações estruturais peculiares:
+\subsection{Instância 2 -- Grafo Heterogêneo com Características Específicas ($|V|=20, |E|=33$)}
+A Instância 2 foi expressamente planejada pelo Integrante 3 (Otávio Soares Pedroso) no arquivo \texttt{instancia2.txt} para averiguar três condições estruturais críticas:
 \begin{itemize}
-    \item \textbf{Circuito Euleriano:} A presença intencional de nós com graus ímpares faz com que o algoritmo de teste retorne corretamente \texttt{Falso}, comprovando que o sistema lida de forma segura com grafos não-eulerianos.
-    \item \textbf{Múltiplas AGMs:} Inserção de arestas com pesos idênticos, permitindo verificar empates de ordenação no Kruskal.
-    \item \textbf{Disparidade de Cobertura:} Graus altamente desbalanceados (hubs centrais e nós folhas), permitindo que a abordagem gulosa supere expressivamente a heurística ingênua de 2-aproximação em cardinalidade.
+    \item \textbf{Pesos Repetidos e Múltiplas AGMs:} O grafo inclui pesos idênticos recorrentes ($1.50$ repetido 7 vezes, $2.00$ repetido 7 vezes, $2.50$, $3.00$, $3.50$, $4.00$, $5.00$). Durante a execução de Kruskal e Prim, ocorrem empates múltiplos na fila de prioridade, comprovando que ambas as estratégias convergem com segurança para árvores geradoras com o mesmo custo mínimo global: $\mathbf{48.50}$.
+    \item \textbf{Heterogeneidade de Graus (Hubs e Folhas):} A topologia apresenta nós fortemente conectados (\textit{hubs}), notadamente o Vértice 1 ($d(1) = 8$) e o Vértice 10 ($d(10) = 7$), em contraste com nós periféricos folhas ($d(19) = 1$ e $d(20) = 1$) e nós intermediários ($d \in \{2, 3, 4\}$). Essa disparidade de conectividade é ideal para testar a habilidade dos algoritmos de cobertura em privilegiar vértices de alta densidade.
+    \item \textbf{Falha Controlada no Circuito Euleriano:} O grafo é estritamente conexo, porém contém 16 vértices com grau ímpar ($V_{\text{ímpar}} = \{2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20\}$). O teste em \texttt{euler.py} acusa corretamente a inexistência de circuito Euleriano, validando a integridade da verificação condicional.
 \end{itemize}
+
+O diâmetro registrado foi de $\mathbf{25.00}$ (par extremo $\{4, 20\}$) e o raio atingiu $\mathbf{13.00}$, com centro topológico único no nó $\mathbf{16}$. Na Cobertura de Vértices, o Guloso selecionou 12 nós em $0.036\text{ ms}$, enquanto o GRASP obteve uma solução mais enxuta com \textbf{11 nós} em $1.767\text{ ms}$, contrastando com os 16 nós gerados pela 2-aproximação.
 
 \subsection{Instância 3 -- Grafo Esparso ($|V|=80, |E|=114$)}
-A Instância 3 representa uma rede com 80 nós e densidade relativa reduzida ($D \approx 0.0361$).
+A Instância 3 representa uma rede com 80 nós e densidade relativa reduzida ($D \approx 0.0361$):
 \begin{itemize}
-    \item \textbf{AGM:} O algoritmo de Kruskal selecionou 79 arestas totalizando custo de \textbf{453.90}.
-    \item \textbf{Métricas de Distância:} Por se tratar de um grafo predominantemente linear e ramificado, o diâmetro atingiu \textbf{85.20} e o raio registrou \textbf{42.90}, tendo o vértice \textbf{75} como centro topológico.
-    \item \textbf{Cobertura de Vértices:} O método guloso selecionou 44 vértices, cobrindo integralmente as 114 conexões em menos de $1.2\text{ ms}$.
+    \item \textbf{AGM:} O algoritmo de Kruskal selecionou 79 arestas totalizando custo de $\mathbf{453.90}$.
+    \item \textbf{Métricas de Distância:} Por se tratar de um grafo predominantemente linear e ramificado, o diâmetro atingiu $\mathbf{85.20}$ e o raio registrou $\mathbf{42.90}$, tendo o vértice $\mathbf{75}$ como centro topológico.
+    \item \textbf{Cobertura de Vértices:} O método guloso selecionou 45 vértices em $0.322\text{ ms}$, e o GRASP convergiu para idênticos 45 nós em $17.478\text{ ms}$. A 2-aproximação selecionou 68 nós.
 \end{itemize}
 
-\subsection{Instância 4 -- Grafo Denso de Grande Porte ($|V|=500, |E|=6.717$)}
-A Instância 4 submete a biblioteca ao teste de estresse temporal e de escalabilidade combinatória.
+\subsection{Instância 4 -- Grafo Denso de Grande Porte ($|V|=250, |E|=10.893$)}
+A Instância 4 foi gerada pelo Integrante 3 (Otávio Soares Pedroso) no arquivo \texttt{instancia4.txt} como teste de estresse temporal e de escalabilidade combinatória:
+\begin{itemize}
+    \item \textbf{Metodologia de Geração:} Construiu-se inicialmente uma árvore geradora aleatória para garantir a conexão estrita entre todos os nós. Em seguida, foram inseridas arestas adicionais amostradas de forma independente até alcançar exatamente $\mathbf{35.00\%}$ de densidade relativa ($10.893$ arestas sobre o total possível de $31.125$), com pesos positivos aleatórios no intervalo $[1.00, 50.00]$.
+    \item \textbf{Desempenho da AGM e Métricas:} O Kruskal computou a árvore geradora de custo $\mathbf{415.99}$ em apenas $4.2\text{ ms}$. O cálculo de caminhos mínimos todos-para-todos via Dijkstra demandou menos de $800\text{ ms}$, obtendo diâmetro de $\mathbf{14.01}$ e raio de $\mathbf{9.31}$.
+    \item \textbf{Teste de Estresse em Cobertura:} O algoritmo guloso processou as $10.893$ arestas e cobriu o grafo com $237$ vértices em apenas $6.139\text{ ms}$. O procedimento GRASP alcançou $236$ nós em $305.864\text{ ms}$, e a 2-aproximação selecionou $248$ nós em $3.583\text{ ms}$.
+\end{itemize}
 
 \begin{table}[H]
     \centering
-    \caption{Comparativo de Desempenho e Cobertura nas 4 Instâncias}
+    \caption{Comparativo Consolidado de Desempenho e Cobertura nas 4 Instâncias}
     \resizebox{\textwidth}{!}{%
-    \begin{tabular}{@{}lcccc@{}}
+    \begin{tabular}{@{}lcccccc@{}}
         \toprule
-        \textbf{Instância} & \textbf{Custo AGM} & \textbf{Diâmetro} & \textbf{Cobertura Gulosa} & \textbf{Cobertura Heurística} \\
-        & & & \textbf{(Vértices / Tempo)} & \textbf{(Vértices / Tempo)} \\ \midrule
-        Instância 1 (10 v) & 20.70 & 11.20 & 6 nós ($< 0.1\text{ ms}$) & 6 nós ($< 0.1\text{ ms}$) \\
-        Instância 2 (20 v) & 48.50 & 18.40 & 11 nós ($0.2\text{ ms}$) & 14 nós ($0.1\text{ ms}$) \\
-        Instância 3 (80 v) & 453.90 & 85.20 & 44 nós ($1.1\text{ ms}$) & 58 nós ($0.3\text{ ms}$) \\
-        Instância 4 (500 v) & 907.94 & 16.80 & 287 nós ($18.5\text{ ms}$) & 362 nós ($4.2\text{ ms}$) \\ \bottomrule
+        \textbf{Instância} & \textbf{Ordem / Arestas} & \textbf{Densidade} & \textbf{Custo AGM} & \textbf{Diâmetro} & \textbf{Cobertura Gulosa} & \textbf{Cobertura GRASP} \\
+        & $(|V| \text{ / } |E|)$ & Relativa & & & \textbf{(Vértices / Tempo)} & \textbf{(Vértices / Tempo)} \\ \midrule
+        Instância 1 & 10 / 13 & 28.89\% & 20.70 & 11.20 & 6 nós ($0.021\text{ ms}$) & \textbf{5 nós} ($0.591\text{ ms}$) \\
+        Instância 2 & 20 / 33 & 17.37\% & 48.50 & 25.00 & 12 nós ($0.036\text{ ms}$) & \textbf{11 nós} ($1.767\text{ ms}$) \\
+        Instância 3 & 80 / 114 & 3.61\% & 453.90 & 85.20 & 45 nós ($0.322\text{ ms}$) & 45 nós ($17.478\text{ ms}$) \\
+        Instância 4 & 250 / 10.893 & 35.00\% & 415.99 & 14.01 & 237 nós ($6.139\text{ ms}$) & \textbf{236 nós} ($305.864\text{ ms}$) \\ \bottomrule
     \end{tabular}%
     }
     \label{tab:comparativo_final}
 \end{table}
 
-\textbf{Análise Crítica:} A tabela \ref{tab:comparativo_final} evidencia o clássico compromisso entre qualidade de solução e custo computacional:
-\begin{itemize}
-    \item A abordagem gulosa sistematicamente obtém soluções de menor cardinalidade (economizando até 20\% no total de vértices na Instância 4), pois reavalia dinamicamente o impacto do grau residual.
-    \item A heurística de 2-aproximação, embora produza coberturas ligeiramente maiores, executa com tempo significativamente inferior em redes densas, já que não requer o recalculo iterativo de graus.
-\end{itemize}
+\subsection{Discussão Crítica: Qualidade da Solução vs. Tempo Computacional}
+A análise comparativa entre as abordagens implementadas para o MVC revela percepções teóricas e práticas fundamentais:
+\begin{enumerate}
+    \item \textbf{Eficácia da Busca Local e GRASP:} Em todas as instâncias heterogêneas (Instâncias 1, 2 e 4), o algoritmo GRASP conseguiu encontrar coberturas estritamente menores do que o guloso puro. Na Instância 1, o guloso estagnou no ótimo local de cardinalidade 6, enquanto o GRASP descobriu a cobertura ótima global de 5 vértices. Na Instância 2, a poda de redundâncias eliminou nós subótimos, reduzindo a cobertura de 12 para 11 vértices. Esse ganho qualitativo justifica o tempo adicional de execução ($0.59\text{ ms}$ a $305\text{ ms}$), que permanece imperceptível na escala de interação humana.
+    \item \textbf{Eficiência Temporal do Guloso Dinâmico:} O algoritmo guloso por grau residual mostrou-se extremamente competitivo. Mesmo na Instância 4, sob carga estressante de mais de 10 mil arestas, a seleção gulosa consumiu meros $6.14\text{ ms}$ e produziu uma solução com apenas 1 nó a mais do que a meta-heurística. Esse resultado atesta a qualidade da ordenação adaptativa em grafos de alta densidade.
+    \item \textbf{Limitações da 2-Aproximação Estática:} Embora a 2-aproximação clássica por emparelhamento maximal seja teoricamente atrativa pelo tempo $O(|E|)$ e garantia de pior caso, sua cardinalidade na prática mostrou-se substancialmente inflacionada (16 nós na Instância 2 contra 11 do GRASP; 68 na Instância 3 contra 45; 248 na Instância 4 contra 236). Como o método obriga a inclusão dos dois vértices da aresta independentemente de sua conectividade residual, ele frequentemente inclui folhas e nós de grau unitário desnecessários.
+\end{enumerate}
 
 % ==============================================================================
 % 8. GUIA DE EXECUÇÃO ATUALIZADO
@@ -475,6 +524,8 @@ A decomposição modular possibilitou que os membros do grupo desenvolvessem sua
     \bibitem{kruskal} KRUSKAL, J. B. \textbf{On the shortest spanning subtree of a graph and the traveling salesman problem}. Proceedings of the American Mathematical Society, v. 7, n. 1, p. 48--50, 1956.
     \bibitem{prim} PRIM, R. C. \textbf{Shortest connection networks and some generalizations}. Bell System Technical Journal, v. 36, n. 6, p. 1389--1401, 1957.
     \bibitem{hierholzer} HIERHOLZER, C. \textbf{Über die Möglichkeit, einen Linienzug ohne Wiederholung und ohne Unterbrechung zu umfahren}. Mathematische Annalen, v. 6, n. 1, p. 30--32, 1873.
+    \bibitem{chvatal} CHVÁTAL, V. \textbf{A greedy heuristic for the set-covering problem}. Mathematics of Operations Research, v. 4, n. 3, p. 233--235, 1979.
+    \bibitem{feoresende} FEO, T. A.; RESENDE, M. G. C. \textbf{Greedy randomized adaptive search procedures}. Journal of Global Optimization, v. 6, n. 2, p. 109--133, 1995.
 \end{thebibliography}
 
 \end{document}

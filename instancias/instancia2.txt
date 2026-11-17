@@ -1,19 +1,43 @@
-# Instância 2: Grafo Desconexo (pelo menos duas componentes conexas)
-# Características: Pelo menos 2 componentes, permitindo testar BFS em grafo desconexo,
-# componentes conexas, ciclos e articulações.
+# Instancia 2: Grafo Estruturado (16 a 30 vertices)
+# Caracteristicas:
+# - Conexo, Ordem = 20 vertices, Tamanho = 33 arestas
+# - Pesos repetidos positivos (multiplas AGMs com empate de ordenacao)
+# - Graus heterogeneos: Hubs (vertice 1 com grau 8, vertice 10 com grau 7) e Folhas (vertices 19 e 20 com grau 1)
+# - Presenca de vertices de grau impar (ausencia controlada de Circuito Euleriano)
 # Formato:
-# 1ª linha: quantidade de vértices
-# Linhas seguintes: v1 v2 peso
-12
+# 1a linha: quantidade de vertices (|V|)
+# Linhas seguintes: u v peso
+20
 1 2 1.5
 1 3 2.0
-2 3 3.5
-2 4 4.0
-4 5 1.0
-6 7 2.2
-7 8 1.8
-8 9 3.0
-6 9 4.1
-10 11 2.5
-11 12 1.7
-10 12 3.3
+1 4 3.5
+1 5 2.0
+1 6 4.0
+1 7 1.5
+1 8 5.0
+1 9 3.0
+2 3 1.5
+3 4 2.5
+4 5 3.5
+5 6 2.0
+6 7 4.0
+7 8 2.5
+8 9 1.5
+9 10 2.0
+10 11 1.5
+10 12 3.0
+10 13 2.0
+10 14 4.0
+10 15 1.5
+10 16 3.5
+11 12 2.5
+12 13 1.5
+13 14 3.0
+14 15 2.0
+15 16 2.5
+16 17 3.0
+17 18 2.0
+17 19 7.5
+18 20 8.0
+2 11 5.0
+7 15 5.0
